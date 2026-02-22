@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agendamento - José Barbearia</title>
+
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: #0f172a;
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+.container {
+    background: #111827;
+    padding: 25px;
+    border-radius: 10px;
+    width: 90%;
+    max-width: 400px;
+}
+
+h2 {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+input, select {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 10px;
+    border: none;
+    border-radius: 6px;
+}
+
+button {
+    width: 100%;
+    padding: 14px;
+    background: #22c55e;
+    border: none;
+    color: white;
+    font-size: 16px;
+    border-radius: 6px;
+}
+
+button:hover {
+    background: #16a34a;
+}
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+<h2>Agendar Horário</h2>
+
+<input type="text" id="nome" placeholder="Seu nome" required>
+<input type="tel" id="telefone" placeholder="Telefone" required>
+
+<select id="servico">
+<option value="">Escolha o serviço</option>
+<option>Corte</option>
+<option>Barba</option>
+<option>Corte + Barba</option>
+</select>
+
+<input type="date" id="data">
+<input type="time" id="hora">
+
+<button onclick="enviarWhats()">Confirmar Agendamento</button>
+
+</div>
+
+<script>
+function enviarWhats() {
+    var nome = document.getElementById("nome").value;
+    var telefone = document.getElementById("telefone").value;
+    var servico = document.getElementById("servico").value;
+    var data = document.getElementById("data").value;
+    var hora = document.getElementById("hora").value;
+
+    if(nome === "" || telefone === "" || servico === "" || data === "" || hora === "") {
+        alert("Preencha todos os campos");
+        return;
+    }
+
+    var numeroBarbeiro = "SEUNUMEROAQUI";
+
+    var mensagem = `Olá, meu nome é ${nome}%0AQuero agendar:%0AServiço: ${servico}%0AData: ${data}%0AHora: ${hora}%0ATelefone: ${telefone}`;
+
+    window.open(`https://wa.me/55${numeroBarbeiro}?text=${mensagem}`, "_blank");
+}
+</script>
+
+</body>
+</html>
