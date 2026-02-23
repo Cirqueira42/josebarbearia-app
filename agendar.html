@@ -1,3 +1,5 @@
+
+```html
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -56,6 +58,7 @@ button{
     border:none;
     font-weight:bold;
     border-radius:6px;
+    cursor:pointer;
 }
 </style>
 </head>
@@ -81,14 +84,14 @@ button{
 
 <input type="hidden" id="hora">
 
-<button onclick="confirmar()">Confirmar</button>
+<button onclick="confirmar()">Confirmar Agendamento</button>
 </div>
 
 <script>
-// ====== CONFIG ======
+// ================= CONFIG =================
 const numeroBarbearia = "5516997369740";
 
-// ====== FUNÇÕES DATA BRASIL ======
+// ================= DATA BRASIL =================
 function hojeBrasil(){
     const agora = new Date();
     const ano = agora.getFullYear();
@@ -104,34 +107,39 @@ function horaAgora(){
     return `${h}:${m}`;
 }
 
-// ====== HORÁRIO DE FUNCIONAMENTO ======
+// ================= HORÁRIO DE FUNCIONAMENTO =================
 function horarioFuncionamento(dia){
-    if(dia == 0) return null; // domingo fechado
 
-    if(dia == 6){ // sábado
-        return [
-            ["08:30","20:00"]
-        ];
+    // Domingo
+    if(dia === 0){
+        return null;
     }
 
-    // segunda, quinta, sexta
-    if(dia==1 || dia==4 || dia==5){
+    // Segunda, Quinta, Sexta (até 19h)
+    if(dia === 1 || dia === 4 || dia === 5){
         return [
             ["09:00","12:00"],
             ["13:00","19:00"]
         ];
     }
 
-    // terça e quarta
-    if(dia==2 || dia==3){
+    // Terça e Quarta (até 18h)
+    if(dia === 2 || dia === 3){
         return [
             ["09:00","12:00"],
             ["13:00","18:00"]
         ];
     }
+
+    // Sábado
+    if(dia === 6){
+        return [
+            ["08:30","20:00"]
+        ];
+    }
 }
 
-// ====== GERAR HORÁRIOS ======
+// ================= GERAR HORÁRIOS =================
 function gerarHorarios(){
     const data = document.getElementById("data").value;
     const container = document.getElementById("horarios");
@@ -139,8 +147,9 @@ function gerarHorarios(){
 
     if(!data) return;
 
+    // bloquear datas passadas
     if(data < hojeBrasil()){
-        container.innerHTML="Data passada";
+        container.innerHTML="Data inválida";
         return;
     }
 
@@ -156,28 +165,26 @@ function gerarHorarios(){
     const hoje = hojeBrasil();
     const horaAtual = horaAgora();
 
-    // horários já agendados
     const agenda = JSON.parse(localStorage.getItem("agenda") || "{}");
     const ocupados = agenda[data] || [];
 
     funcionamento.forEach(periodo=>{
-        let [inicio,fim] = periodo;
-
-        let atual = new Date("2000-01-01 "+inicio);
-        const limite = new Date("2000-01-01 "+fim);
+        let atual = new Date("2000-01-01 "+periodo[0]);
+        const limite = new Date("2000-01-01 "+periodo[1]);
 
         while(atual < limite){
+
             let h = ("0"+atual.getHours()).slice(-2);
             let m = ("0"+atual.getMinutes()).slice(-2);
             let horaTexto = `${h}:${m}`;
 
-            // bloquear passado se for hoje
-            if(data == hoje && horaTexto <= horaAtual){
+            // bloquear horários passados se for hoje
+            if(data === hoje && horaTexto <= horaAtual){
                 atual.setMinutes(atual.getMinutes()+10);
                 continue;
             }
 
-            // bloquear ocupados
+            // bloquear horários já ocupados
             if(!ocupados.includes(horaTexto)){
                 const div = document.createElement("div");
                 div.className="horario";
@@ -198,24 +205,24 @@ function gerarHorarios(){
     });
 }
 
-// ====== CONFIRMAR ======
+// ================= CONFIRMAR =================
 function confirmar(){
     const nome = document.getElementById("nome").value;
-    const tel = document.getElementById("telefone").value;
+    const telefone = document.getElementById("telefone").value;
     const servicoSelect = document.getElementById("servico");
     const duracao = parseInt(servicoSelect.value);
     const servicoNome = servicoSelect.options[servicoSelect.selectedIndex].text;
     const data = document.getElementById("data").value;
     const hora = document.getElementById("hora").value;
 
-    if(!nome || !tel || !duracao || !data || !hora){
-        alert("Preencha tudo");
+    if(!nome || !telefone || !duracao || !data || !hora){
+        alert("Preencha todos os campos");
         return;
     }
 
     // salvar cliente
     localStorage.setItem("nome",nome);
-    localStorage.setItem("telefone",tel);
+    localStorage.setItem("telefone",telefone);
 
     // gerar código
     const codigo = Math.random().toString(36).substring(2,10).toUpperCase();
@@ -224,8 +231,8 @@ function confirmar(){
     const agenda = JSON.parse(localStorage.getItem("agenda") || "{}");
     if(!agenda[data]) agenda[data]=[];
 
-    // bloquear tempo do serviço
     let atual = new Date("2000-01-01 "+hora);
+
     for(let i=0;i<duracao;i+=10){
         let h=("0"+atual.getHours()).slice(-2);
         let m=("0"+atual.getMinutes()).slice(-2);
@@ -255,29 +262,20 @@ https://maps.app.goo.gl/JVahTmuAYLfAiyx57`;
 `NOVO AGENDAMENTO
 
 Cliente: ${nome}
-Telefone: ${tel}
+Telefone: ${telefone}
 Serviço: ${servicoNome}
 Data: ${data}
 Hora: ${hora}
 Código: ${codigo}`;
 
-    // abre WhatsApp cliente
-    window.open(
-        `https://wa.me/55${tel}?text=${encodeURIComponent(msgCliente)}`,
-        "_blank"
-    );
+    window.open(`https://wa.me/55${telefone}?text=${encodeURIComponent(msgCliente)}`, "_blank");
+    window.open(`https://wa.me/${numeroBarbearia}?text=${encodeURIComponent(msgBarbearia)}`, "_blank");
 
-    // abre WhatsApp barbearia
-    window.open(
-        `https://wa.me/${numeroBarbearia}?text=${encodeURIComponent(msgBarbearia)}`,
-        "_blank"
-    );
-
-    alert("Agendamento realizado!");
+    alert("Agendamento confirmado!");
     gerarHorarios();
 }
 
-// ====== INÍCIO ======
+// ================= INICIAR =================
 window.onload=function(){
     document.getElementById("nome").value = localStorage.getItem("nome") || "";
     document.getElementById("telefone").value = localStorage.getItem("telefone") || "";
@@ -287,3 +285,4 @@ window.onload=function(){
 
 </body>
 </html>
+```
