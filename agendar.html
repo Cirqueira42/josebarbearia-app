@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
@@ -23,11 +22,7 @@ body {
     border-radius: 10px;
     width: 90%;
     max-width: 400px;
-}
-
-h2 {
     text-align: center;
-    margin-bottom: 20px;
 }
 
 input, select {
@@ -46,35 +41,30 @@ button {
     color: white;
     font-size: 16px;
     border-radius: 6px;
-}
-
-button:hover {
-    background: #16a34a;
+    cursor: pointer;
 }
 </style>
-
 </head>
 
 <body>
 
 <div class="container">
-<h2>Agendar Horário</h2>
+    <h2>Agendar Horário</h2>
 
-<input type="text" id="nome" placeholder="Seu nome" required>
-<input type="tel" id="telefone" placeholder="Telefone" required>
+    <input type="text" id="nome" placeholder="Seu nome" required>
+    <input type="tel" id="telefone" placeholder="Telefone" required>
 
-<select id="servico">
-<option value="">Escolha o serviço</option>
-<option>Corte</option>
-<option>Barba</option>
-<option>Corte + Barba</option>
-</select>
+    <select id="servico">
+        <option value="">Escolha o serviço</option>
+        <option>Corte</option>
+        <option>Barba</option>
+        <option>Corte + Barba</option>
+    </select>
 
-<input type="date" id="data">
-<input type="time" id="hora">
+    <input type="date" id="data">
+    <input type="time" id="hora">
 
-<button onclick="enviarWhats()">Confirmar Agendamento</button>
-
+    <button onclick="enviarWhats()">Confirmar Agendamento</button>
 </div>
 
 <script>
@@ -85,16 +75,16 @@ function enviarWhats() {
     var data = document.getElementById("data").value;
     var hora = document.getElementById("hora").value;
 
-    if(nome === "" || telefone === "" || servico === "" || data === "" || hora === "") {
-        alert("Preencha todos os campos");
-        return;
-    }
+    var mensagem = `Agendamento:%0A
+Nome: ${nome}%0A
+Telefone: ${telefone}%0A
+Serviço: ${servico}%0A
+Data: ${data}%0A
+Hora: ${hora}`;
 
-    var numeroBarbeiro = "SEUNUMEROAQUI";
+    var numero = "55SEUNUMERO"; // coloque seu WhatsApp
 
-    var mensagem = `Olá, meu nome é ${nome}%0AQuero agendar:%0AServiço: ${servico}%0AData: ${data}%0AHora: ${hora}%0ATelefone: ${telefone}`;
-
-    window.open(`https://wa.me/55${numeroBarbeiro}?text=${mensagem}`, "_blank");
+    window.open(`https://wa.me/${numero}?text=${mensagem}`, "_blank");
 }
 </script>
 
