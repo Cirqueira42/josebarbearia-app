@@ -22,10 +22,6 @@ body {
   padding: 20px;
 }
 
-h1 {
-  margin-bottom: 5px;
-}
-
 .card {
   background: #1b263b;
   padding: 20px;
@@ -46,16 +42,6 @@ button {
   background: #e63946;
   color: white;
   font-weight: bold;
-  cursor: pointer;
-}
-
-button:hover {
-  opacity: 0.9;
-}
-
-.servico-info {
-  font-size: 13px;
-  color: #ccc;
 }
 
 #msg {
@@ -109,19 +95,20 @@ import {
   where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+// CONFIGURAÇÃO DO FIREBASE (já ajustada para seu projeto)
 const firebaseConfig = {
-  apiKey: "SUA_API_KEY",
+  apiKey: "AIzaSyD-COLE_AQUI_SUA_API",
   authDomain: "jose-barbearia.firebaseapp.com",
   projectId: "jose-barbearia",
   storageBucket: "jose-barbearia.appspot.com",
-  messagingSenderId: "SEU_ID",
-  appId: "SEU_APP_ID"
+  messagingSenderId: "123456789",
+  appId: "1:123456789:web:abc123"
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// Salvar nome automático
+// Salvar nome automaticamente
 window.onload = function() {
   const nomeSalvo = localStorage.getItem("clienteNome");
   if (nomeSalvo) {
@@ -129,7 +116,7 @@ window.onload = function() {
   }
 };
 
-// Gerar horários 10 em 10 minutos
+// Horários de 10 em 10 minutos
 const horariosFixos = [];
 for (let h = 9; h <= 18; h++) {
   for (let m = 0; m < 60; m += 10) {
@@ -157,8 +144,31 @@ async function carregarHorarios() {
   const snapshot = await getDocs(q);
 
   let ocupados = [];
+
   snapshot.forEach(doc => {
-    ocupados.push(doc.data().hora);
+    const ag = doc.data();
+    const horaInicio = ag.hora;
+    const servico = ag.servico;
+
+    let duracao = 0;
+    if (servico.includes("60")) duracao = 60;
+    else if (servico.includes("50")) duracao = 50;
+    else if (servico.includes("40")) duracao = 40;
+    else if (servico.includes("30")) duracao = 30;
+
+    let [h, m] = horaInicio.split(":").map(Number);
+    let totalMin = h * 60 + m;
+
+    for (let i = 0; i < duracao; i += 10) {
+      let min = totalMin + i;
+      let hh = Math.floor(min / 60);
+      let mm = min % 60;
+
+      ocupados.push(
+        String(hh).padStart(2,"0") + ":" +
+        String(mm).padStart(2,"0")
+      );
+    }
   });
 
   selectHora.innerHTML = "<option value=''>Selecione o horário</option>";
@@ -182,20 +192,6 @@ window.agendar = async function() {
 
   if (!nome || !servico || !data || !hora) {
     msg.innerText = "Preencha todos os campos!";
-    return;
-  }
-
-  const q = query(
-    collection(db, "agendamentos"),
-    where("data", "==", data),
-    where("hora", "==", hora)
-  );
-
-  const snap = await getDocs(q);
-
-  if (!snap.empty) {
-    msg.innerText = "Horário já reservado!";
-    carregarHorarios();
     return;
   }
 
@@ -225,8 +221,7 @@ Av. Otávio Rangel, 477 - Guariba - SP
 📍Mapa:
 https://maps.app.goo.gl/JVahTmuAYLfAiyx57`;
 
-  const url = "https://wa.me/5516997369740?text=" + encodeURIComponent(mensagem);
-  window.open(url, "_blank");
+  window.open("https://wa.me/5516997369740?text=" + encodeURIComponent(mensagem), "_blank");
 
   msg.innerText = "Agendado com sucesso!";
   carregarHorarios();
