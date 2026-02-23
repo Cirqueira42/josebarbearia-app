@@ -37,33 +37,23 @@ button {
   color: white;
   font-weight: bold;
 }
-
-h1 {
-  margin-bottom: 5px;
-}
-
-small {
-  color: #ccc;
-}
 </style>
 
 </head>
 <body>
 
 <div class="container">
-  <h1>José Barbearia</h1>
-  <small>Agende seu horário</small>
+  <h2>José Barbearia</h2>
 
   <input type="text" id="nome" placeholder="Seu nome">
-
   <input type="date" id="data">
 
   <select id="servico">
     <option value="">Selecione o serviço</option>
-    <option value="Corte|50">Corte - 50 min</option>
-    <option value="Barba|30">Barba - 30 min</option>
-    <option value="Corte+Barba|60">Corte + Barba - 60 min</option>
-    <option value="Infantil|40">Corte Infantil - 40 min</option>
+    <option value="Corte|50">Corte – 50 min</option>
+    <option value="Barba|30">Barba – 30 min</option>
+    <option value="Corte+Barba|60">Corte + Barba – 60 min</option>
+    <option value="Infantil|40">Infantil – 40 min</option>
   </select>
 
   <select id="hora">
@@ -87,7 +77,6 @@ import {
   where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-/* COLE SEU firebaseConfig AQUI */
 const firebaseConfig = {
   apiKey: "SUA_API_KEY",
   authDomain: "jose-barbearia.firebaseapp.com",
@@ -100,7 +89,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// Horários de 10 em 10 minutos
+// gerar horários de 10 em 10 minutos
 const horariosFixos = [];
 for (let h = 9; h <= 18; h++) {
   for (let m = 0; m < 60; m += 10) {
@@ -117,6 +106,18 @@ const dataInput = document.getElementById("data");
 
 dataInput.addEventListener("change", carregarHorarios);
 
+function horaParaMinutos(hora) {
+  const [h, m] = hora.split(":").map(Number);
+  return h * 60 + m;
+}
+
+function minutosParaHora(min) {
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return String(h).padStart(2, "0") + ":" +
+         String(m).padStart(2, "0");
+}
+
 async function carregarHorarios() {
   const data = dataInput.value;
   selectHora.innerHTML = "<option>Carregando...</option>";
@@ -132,21 +133,11 @@ async function carregarHorarios() {
 
   snapshot.forEach(doc => {
     const ag = doc.data();
-    const horaInicio = ag.hora;
-    const duracao = ag.duracao || 0;
+    const inicio = horaParaMinutos(ag.hora);
+    const fim = inicio + ag.duracao;
 
-    let [h, m] = horaInicio.split(":").map(Number);
-    let total = h * 60 + m;
-
-    for (let i = 0; i < duracao; i += 10) {
-      let min = total + i;
-      let hh = Math.floor(min / 60);
-      let mm = min % 60;
-
-      ocupados.push(
-        String(hh).padStart(2, "0") + ":" +
-        String(mm).padStart(2, "0")
-      );
+    for (let t = inicio; t < fim; t += 10) {
+      ocupados.push(minutosParaHora(t));
     }
   });
 
@@ -154,7 +145,7 @@ async function carregarHorarios() {
 
   horariosFixos.forEach(h => {
     if (!ocupados.includes(h)) {
-      let opt = document.createElement("option");
+      const opt = document.createElement("option");
       opt.value = h;
       opt.textContent = h;
       selectHora.appendChild(opt);
@@ -165,47 +156,4 @@ async function carregarHorarios() {
 window.agendar = async function() {
   const nome = document.getElementById("nome").value;
   const data = dataInput.value;
-  const hora = selectHora.value;
-  const servicoSelect = document.getElementById("servico").value;
-  const msg = document.getElementById("msg");
-
-  if (!nome || !data || !hora || !servicoSelect) {
-    msg.innerText = "Preencha tudo!";
-    return;
-  }
-
-  const [servico, duracaoStr] = servicoSelect.split("|");
-  const duracao = parseInt(duracaoStr);
-
-  // Segurança contra duplicação
-  const q = query(
-    collection(db, "agendamentos"),
-    where("data", "==", data),
-    where("hora", "==", hora)
-  );
-
-  const snap = await getDocs(q);
-  if (!snap.empty) {
-    msg.innerText = "Horário já ocupado!";
-    carregarHorarios();
-    return;
-  }
-
-  await addDoc(collection(db, "agendamentos"), {
-    nome,
-    data,
-    hora,
-    servico,
-    duracao,
-    criadoEm: new Date()
-  });
-
-  msg.innerText = "Agendado com sucesso!";
-  document.getElementById("nome").value = "";
-  carregarHorarios();
-};
-
-</script>
-
-</body>
-</html>
+  const hora = se
