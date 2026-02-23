@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
@@ -38,7 +37,6 @@ button {
   font-weight: bold;
 }
 </style>
-
 </head>
 <body>
 
@@ -60,7 +58,7 @@ button {
     <option value="">Selecione o horário</option>
   </select>
 
-<button onclick="agendar()">Agendar</button>
+  <button onclick="agendar()">Agendar</button>
 
   <p id="msg"></p>
 </div>
@@ -89,7 +87,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// Gera horários de 09:00 até 18:00 de 10 em 10 minutos
+// horários base 09:00 até 18:00 de 10 em 10 minutos
 const horariosBase = [];
 for (let h = 9; h <= 18; h++) {
   for (let m = 0; m < 60; m += 10) {
@@ -122,11 +120,11 @@ function minParaHora(min) {
 async function carregarHorarios() {
 
   const data = dataInput.value;
-  const servico = servicoInput.value;
+  const servicoVal = servicoInput.value;
 
-  if (!data || !servico) return;
+  if (!data || !servicoVal) return;
 
-  const duracao = parseInt(servico.split("|")[1]);
+  const duracaoSelecionada = parseInt(servicoVal.split("|")[1]);
 
   selectHora.innerHTML = "<option>Carregando...</option>";
 
@@ -141,21 +139,25 @@ async function carregarHorarios() {
 
   snapshot.forEach(doc => {
     const ag = doc.data();
+
     const inicio = horaParaMin(ag.hora);
-    const fim = inicio + ag.duracao;
+
+    // se agendamentos antigos não tiverem duração
+    const duracaoAg = ag.duracao ? ag.duracao : 60;
+
+    const fim = inicio + duracaoAg;
 
     for (let t = inicio; t < fim; t += 10) {
       ocupados.push(minParaHora(t));
     }
   });
 
-  // Agora monta lista só com horários livres que cabem na duração
   selectHora.innerHTML = "<option value=''>Selecione o horário</option>";
 
   horariosBase.forEach(h => {
 
     const inicio = horaParaMin(h);
-    const fim = inicio + duracao;
+    const fim = inicio + duracaoSelecionada;
 
     let conflito = false;
 
@@ -172,7 +174,6 @@ async function carregarHorarios() {
       opt.textContent = h;
       selectHora.appendChild(opt);
     }
-
   });
 }
 
@@ -201,7 +202,8 @@ window.agendar = async function() {
     criadoEm: new Date()
   });
 
-  msg.innerText = "Agendamento realizado!";
+  msg.innerText = "Agendamento realizado com sucesso!";
+  document.getElementById("nome").value = "";
   carregarHorarios();
 };
 
