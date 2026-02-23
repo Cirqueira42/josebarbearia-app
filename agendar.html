@@ -1,47 +1,99 @@
+
+ 
+    
+    
+    ```html
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Agendamento - José Barbearia</title>
+<title>Barbearia - Agendamento</title>
 
 <style>
 body {
-    font-family: Arial, sans-serif;
-    background: #0f172a;
-    color: white;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background: #0d0d0d;
+    color: #fff;
 }
 
 .container {
-    background: #111827;
-    padding: 25px;
-    border-radius: 10px;
-    width: 90%;
     max-width: 400px;
+    margin: auto;
+    padding: 25px;
+}
+
+h2 {
     text-align: center;
+    color: #c9a227;
+    letter-spacing: 1px;
 }
 
 input, select {
     width: 100%;
-    padding: 12px;
-    margin-bottom: 10px;
-    border: none;
-    border-radius: 6px;
+    padding: 14px;
+    margin-bottom: 12px;
+    border: 1px solid #333;
+    background: #1a1a1a;
+    color: #fff;
+    border-radius: 8px;
+    font-size: 15px;
+}
+
+input:focus, select:focus {
+    border-color: #c9a227;
+    outline: none;
+}
+
+label {
+    font-size: 14px;
+    color: #c9a227;
+}
+
+#horarios {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-top: 10px;
+    margin-bottom: 15px;
+}
+
+.horario {
+    background: #1a1a1a;
+    padding: 10px;
+    text-align: center;
+    border-radius: 8px;
+    border: 1px solid #333;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.horario:hover {
+    border-color: #c9a227;
+}
+
+.horario.selecionado {
+    background: #c9a227;
+    color: #000;
+    font-weight: bold;
 }
 
 button {
     width: 100%;
-    padding: 14px;
-    background: #22c55e;
+    padding: 15px;
+    background: #c9a227;
     border: none;
-    color: white;
+    color: #000;
     font-size: 16px;
-    border-radius: 6px;
+    font-weight: bold;
+    border-radius: 8px;
     cursor: pointer;
+    transition: 0.3s;
+}
+
+button:hover {
+    background: #e6b800;
 }
 </style>
 </head>
@@ -49,50 +101,95 @@ button {
 <body>
 
 <div class="container">
-    <h2>Agendar Horário</h2>
+<h2>Agendar Horário</h2>
 
-    <input type="text" id="nome" placeholder="Seu nome" required>
-    <input type="tel" id="telefone" placeholder="Telefone" required>
+<input type="text" id="nome" placeholder="Seu nome">
+<input type="tel" id="telefone" placeholder="Telefone">
 
-    <select id="servico">
-        <option value="">Escolha o serviço</option>
-        <option>Corte</option>
-        <option>Barba</option>
-        <option>Corte + Barba</option>
-    </select>
+<select id="servico">
+<option value="">Escolha o serviço</option>
+<option>Corte</option>
+<option>Barba</option>
+<option>Corte + Barba</option>
+<option>Corte Infantil</option>
+</select>
 
-    <input type="date" id="data">
-    <input type="time" id="hora">
+<input type="date" id="data">
 
-    <button onclick="enviarWhats()">Confirmar Agendamento</button>
+<label>Escolha o horário</label>
+<div id="horarios"></div>
+
+<input type="hidden" id="hora">
+
+<button onclick="confirmar()">Confirmar Agendamento</button>
 </div>
 
 <script>
 
-    <script>
-function enviarWhats() {
+// Auto preencher
+window.onload = function () {
+    document.getElementById("nome").value = localStorage.getItem("nome") || "";
+    document.getElementById("telefone").value = localStorage.getItem("telefone") || "";
+    gerarHorarios();
+};
+
+function gerarHorarios() {
+    var container = document.getElementById("horarios");
+    container.innerHTML = "";
+
+    for (var h = 9; h <= 19; h++) {
+        var horaTexto = (h < 10 ? "0" : "") + h + ":00";
+
+        var div = document.createElement("div");
+        div.className = "horario";
+        div.innerText = horaTexto;
+
+        div.onclick = function () {
+            document.querySelectorAll(".horario").forEach(x => x.classList.remove("selecionado"));
+            this.classList.add("selecionado");
+            document.getElementById("hora").value = this.innerText;
+        };
+
+        container.appendChild(div);
+    }
+}
+
+function confirmar() {
     var nome = document.getElementById("nome").value;
     var telefone = document.getElementById("telefone").value;
     var servico = document.getElementById("servico").value;
     var data = document.getElementById("data").value;
     var hora = document.getElementById("hora").value;
 
-    var mensagem = `Agendamento:%0A
-Nome: ${nome}%0A
-Telefone: ${telefone}%0A
-Serviço: ${servico}%0A
-Data: ${data}%0A
-Hora: ${hora}`;
+    if (!nome || !telefone || !servico || !data || !hora) {
+        alert("Preencha todos os campos");
+        return;
+    }
+
+    localStorage.setItem("nome", nome);
+    localStorage.setItem("telefone", telefone);
+
+    var mensagem =
+`Novo Agendamento
+
+Cliente: ${nome}
+Telefone: ${telefone}
+Serviço: ${servico}
+Data: ${data}
+Hora: ${hora}
+
+Endereço:
+Av. Otável Rangel, 477`;
 
     var numero = "5516997369740";
-    var url = `https://wa.me/${numero}?text=${mensagem}`;
-
-    window.open(url, "_blank");
+    var urlWhats = "https://wa.me/" + numero + "?text=" + encodeURIComponent(mensagem);
+    window.open(urlWhats, "_blank");
 }
 </script>
- 
-    
-    
-    
+
+</body>
+</html>
+```
+
 
    
