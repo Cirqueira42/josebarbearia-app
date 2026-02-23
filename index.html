@@ -1,221 +1,115 @@
-
 <!DOCTYPE html>
 
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<title>José Barbearia</title>
+<title>Admin - José Barbearia</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-
 <style>
-body {
-  font-family: Arial;
-  background: #0d1b2a;
-  color: white;
-  text-align: center;
-  padding: 20px;
-}
-
-.container {
-  background: #1b263b;
-  padding: 20px;
-  border-radius: 10px;
-  max-width: 400px;
-  margin: auto;
-}
-
-input, select, button {
-  width: 100%;
-  padding: 12px;
-  margin-top: 10px;
-  border-radius: 6px;
-  border: none;
-  font-size: 16px;
-}
-
-button {
-  background: #e63946;
-  color: white;
-  font-weight: bold;
-}
+body{font-family:Arial;background:#0d1b2a;color:white;text-align:center;padding:20px}
+.container{background:#1b263b;padding:20px;border-radius:10px;max-width:500px;margin:auto}
+input,button{width:100%;padding:10px;margin-top:10px;border-radius:6px;border:none}
+button{background:#e63946;color:white;font-weight:bold}
+.item{background:#0d1b2a;margin-top:8px;padding:8px;border-radius:6px}
 </style>
-
 </head>
 <body>
 
 <div class="container">
-  <h2>José Barbearia</h2>
+<h2>Painel Administrativo</h2>
 
-  <input type="text" id="nome" placeholder="Seu nome">
-  <input type="date" id="data">
+<h3>Ver Agendamentos</h3>
+<input type="date" id="dataBusca">
+<button onclick="buscar()">Buscar</button>
+<div id="lista"></div>
 
-  <select id="servico">
-    <option value="">Selecione o serviço</option>
-    <option value="Corte|50">Corte – 50 min – R$30</option>
-    <option value="Barba|30">Barba – 30 min – R$20</option>
-    <option value="Corte + Barba|60">Corte + Barba – 60 min – R$45</option>
-    <option value="Infantil|40">Infantil – 40 min – R$25</option>
-  </select>
+<hr>
 
-  <select id="hora">
-    <option value="">Selecione o horário</option>
-  </select>
+<h3>Bloquear horário</h3>
+<input type="date" id="dataBloq">
+<input type="time" id="horaBloq">
+<button onclick="bloquearHora()">Bloquear horário</button>
 
-<button onclick="agendar()">Agendar</button>
+<h3>Bloquear dia inteiro</h3>
+<input type="date" id="dataDia">
+<button onclick="bloquearDia()">Bloquear dia</button>
 
-  <p id="msg"></p>
+<p id="msg"></p>
 </div>
 
 <script type="module">
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import {
-  getFirestore,
-  collection,
-  addDoc,
-  getDocs,
-  query,
-  where
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore,collection,getDocs,query,where,addDoc,deleteDoc,doc }
+from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-// COLE SEUS DADOS DO FIREBASE AQUI
-const firebaseConfig = {
-  apiKey: "SUA_API_KEY",
-  authDomain: "jose-barbearia.firebaseapp.com",
-  projectId: "jose-barbearia",
-  storageBucket: "jose-barbearia.appspot.com",
-  messagingSenderId: "SEU_ID",
-  appId: "SEU_APP_ID"
+const firebaseConfig={
+apiKey:"SUA_API_KEY",
+authDomain:"jose-barbearia.firebaseapp.com",
+projectId:"jose-barbearia",
+storageBucket:"jose-barbearia.appspot.com",
+messagingSenderId:"SEU_ID",
+appId:"SEU_APP_ID"
 };
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+const app=initializeApp(firebaseConfig);
+const db=getFirestore(app);
 
-// ===== CONFIG WHATSAPP =====
-const telefoneBarbearia = "5516997369740";
-const endereco = "Av. Otávio Rangel, 477 - Guariba - SP";
-const mapa = "https://maps.app.goo.gl/JVahTmuAYLfAiyx57";
-const profissional = "JOSE GILMARIO";
+window.buscar=async function(){
+const data=document.getElementById("dataBusca").value;
+const lista=document.getElementById("lista");
+if(!data)return;
 
-// ===== GERAR CÓDIGO =====
-function gerarCodigo() {
-  return Math.random().toString(36).substring(2,10).toUpperCase();
+lista.innerHTML="Carregando...";
+
+const q=query(collection(db,"agendamentos"),where("data","==",data));
+const snap=await getDocs(q);
+
+lista.innerHTML="";
+
+snap.forEach(d=>{
+const ag=d.data();
+const div=document.createElement("div");
+div.className="item";
+div.innerHTML=`${ag.hora} - ${ag.nome} (${ag.servico})
+<br><button onclick="remover('${d.id}')">Excluir</button>`;
+lista.appendChild(div);
+});
+
+if(lista.innerHTML==="")lista.innerHTML="Nenhum agendamento";
 }
 
-// ===== HORÁRIOS BASE =====
-const horariosBase = [];
-for (let h = 9; h <= 18; h++) {
-  for (let m = 0; m < 60; m += 10) {
-    if (h === 18 && m > 0) continue;
-    horariosBase.push(
-      String(h).padStart(2,"0") + ":" +
-      String(m).padStart(2,"0")
-    );
-  }
+window.remover=async function(id){
+await deleteDoc(doc(db,"agendamentos",id));
+alert("Removido");
 }
 
-const dataInput = document.getElementById("data");
-const servicoInput = document.getElementById("servico");
-const selectHora = document.getElementById("hora");
+window.bloquearHora=async function(){
+const data=document.getElementById("dataBloq").value;
+const hora=document.getElementById("horaBloq").value;
+if(!data||!hora)return;
 
-dataInput.addEventListener("change", carregarHorarios);
-servicoInput.addEventListener("change", carregarHorarios);
+await addDoc(collection(db,"bloqueios"),{
+data,
+hora,
+duracao:60
+});
 
-function horaParaMin(h) {
-  const [hh, mm] = h.split(":").map(Number);
-  return hh * 60 + mm;
+document.getElementById("msg").innerText="Horário bloqueado";
 }
 
-function minParaHora(min) {
-  const h = Math.floor(min / 60);
-  const m = min % 60;
-  return String(h).padStart(2,"0") + ":" + String(m).padStart(2,"0");
+window.bloquearDia=async function(){
+const data=document.getElementById("dataDia").value;
+if(!data)return;
+
+await addDoc(collection(db,"bloqueios"),{
+data,
+hora:"09:00",
+duracao:600
+});
+
+document.getElementById("msg").innerText="Dia bloqueado";
 }
+</script>
 
-async function carregarHorarios() {
-
-  const data = dataInput.value;
-  const servicoVal = servicoInput.value;
-  if (!data || !servicoVal) return;
-
-  const duracaoSelecionada = parseInt(servicoVal.split("|")[1]);
-
-  selectHora.innerHTML = "<option>Carregando...</option>";
-
-  const q = query(
-    collection(db, "agendamentos"),
-    where("data", "==", data)
-  );
-
-  const snapshot = await getDocs(q);
-
-  let ocupados = [];
-
-  snapshot.forEach(doc => {
-    const ag = doc.data();
-    const inicio = horaParaMin(ag.hora);
-    const fim = inicio + (ag.duracao || 60);
-
-    for (let t = inicio; t < fim; t += 10) {
-      ocupados.push(minParaHora(t));
-    }
-  });
-
-  selectHora.innerHTML = "<option value=''>Selecione o horário</option>";
-
-  horariosBase.forEach(h => {
-
-    const inicio = horaParaMin(h);
-    const fim = inicio + duracaoSelecionada;
-
-    let conflito = false;
-
-    for (let t = inicio; t < fim; t += 10) {
-      if (ocupados.includes(minParaHora(t))) {
-        conflito = true;
-        break;
-      }
-    }
-
-    if (!conflito) {
-      const opt = document.createElement("option");
-      opt.value = h;
-      opt.textContent = h;
-      selectHora.appendChild(opt);
-    }
-  });
-}
-
-// ===== AGENDAR =====
-window.agendar = async function() {
-
-  const nome = document.getElementById("nome").value;
-  const data = dataInput.value;
-  const hora = selectHora.value;
-  const servicoVal = servicoInput.value;
-  const msg = document.getElementById("msg");
-
-  if (!nome || !data || !hora || !servicoVal) {
-    msg.innerText = "Preencha tudo!";
-    return;
-  }
-
-  const [servico, duracaoStr] = servicoVal.split("|");
-  const duracao = parseInt(duracaoStr);
-  const codigo = gerarCodigo();
-
-  await addDoc(collection(db, "agendamentos"), {
-    nome,
-    data,
-    hora,
-    servico,
-    duracao,
-    codigo,
-    criadoEm: new Date()
-  });
-
-  msg.innerText = "Agendamento confirmado!";
-
-  // ===== MENSAGEM WHATSAPP =====
-  const mensagem =
-`Olá, ${nome} o seu agendamento com
+</body>
+</html>
