@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
@@ -7,113 +8,154 @@
 
 <style>
 body {
-  font-family: Arial;
+  margin: 0;
+  font-family: Arial, sans-serif;
   background: #0f172a;
   color: white;
-  text-align: center;
 }
 
 .container {
   padding: 40px 20px;
+  text-align: center;
 }
 
-input, select, button {
-  padding: 10px;
-  margin: 10px;
-  width: 90%;
-  max-width: 300px;
-  border-radius: 6px;
+.card {
+  background: #1e293b;
+  padding: 20px;
+  border-radius: 12px;
+  max-width: 400px;
+  margin: auto;
+  margin-top: 20px;
+}
+
+input, select {
+  width: 100%;
+  padding: 12px;
+  margin-top: 10px;
+  margin-bottom: 15px;
+  border-radius: 8px;
   border: none;
+  font-size: 16px;
 }
 
 button {
-  background: #00c853;
+  background: #f59e0b;
+  border: none;
+  padding: 15px;
+  width: 100%;
   color: white;
   font-size: 16px;
+  border-radius: 8px;
   cursor: pointer;
 }
+
+h1 {
+  margin-bottom: 10px;
+}
+
+.hidden {
+  display: none;
+}
 </style>
+
 </head>
 
 <body>
-<div class="container">
+
+<!-- Tela Inicial -->
+
+<div class="container" id="home">
   <h1>José Barbearia</h1>
-
-  <input type="text" id="nome" placeholder="Seu nome">
-
-  <input type="date" id="data">
-
-  <select id="hora">
-    <option value="">Escolha o horário</option>
-    <option>09:00</option>
-    <option>10:00</option>
-    <option>11:00</option>
-    <option>14:00</option>
-    <option>15:00</option>
-    <option>16:00</option>
-  </select>
-
-  <button onclick="agendar()">Agendar</button>
-
-  <p id="msg"></p>
+  <p>Agende seu horário online</p>
+  <button onclick="abrirAgendamento()">Agendar agora</button>
 </div>
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import {
-  getFirestore,
-  collection,
-  addDoc,
-  getDocs,
-  query,
-  where
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+<!-- Tela de Agendamento -->
 
-const firebaseConfig = {
-  apiKey: "COLE_SUA_API_KEY_AQUI",
-  authDomain: "jose-barbearia.firebaseapp.com",
-  projectId: "jose-barbearia",
-  storageBucket: "jose-barbearia.firebasestorage.app",
-  messagingSenderId: "1015835277497",
-  appId: "1:1015835277497:web:e45a08760e53d160260368"
-};
+<div class="container hidden" id="agendamento">
+  <div class="card">
+    <h2>Agendar Corte</h2>
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+```
+<input id="nome" placeholder="Nome completo">
+<input id="telefone" placeholder="Telefone com DDD">
 
-window.agendar = async function () {
+<label>Data</label>
+<input type="date" id="data">
+
+<label>Horário</label>
+<select id="hora"></select>
+
+<button onclick="agendar()">Confirmar Agendamento</button>
+<br><br>
+<button onclick="voltar()">Voltar</button>
+```
+
+  </div>
+</div>
+
+<script>
+// Mostrar tela
+function abrirAgendamento() {
+  document.getElementById("home").classList.add("hidden");
+  document.getElementById("agendamento").classList.remove("hidden");
+}
+
+function voltar() {
+  document.getElementById("agendamento").classList.add("hidden");
+  document.getElementById("home").classList.remove("hidden");
+}
+
+// Gerar horários de 10 em 10 minutos (09:00 às 19:00)
+const selectHora = document.getElementById("hora");
+
+function gerarHorarios() {
+  for (let h = 9; h <= 19; h++) {
+    for (let m = 0; m < 60; m += 10) {
+      let hora = String(h).padStart(2,'0') + ":" + String(m).padStart(2,'0');
+      let option = document.createElement("option");
+      option.value = hora;
+      option.text = hora;
+      selectHora.appendChild(option);
+    }
+  }
+}
+gerarHorarios();
+
+// Função agendar
+function agendar() {
   const nome = document.getElementById("nome").value;
+  const telefone = document.getElementById("telefone").value;
   const data = document.getElementById("data").value;
   const hora = document.getElementById("hora").value;
-  const msg = document.getElementById("msg");
 
-  if (!nome || !data || !hora) {
-    msg.innerText = "Preencha todos os campos";
+  if (!nome || !telefone || !data) {
+    alert("Preencha todos os campos");
     return;
   }
 
-  const q = query(
-    collection(db, "agendamentos"),
-    where("data", "==", data),
-    where("hora", "==", hora)
-  );
+  const codigo = Math.random().toString(36).substring(2,10).toUpperCase();
 
-  const resultado = await getDocs(q);
+  const mensagem =
+`Olá, ${nome} o seu agendamento com a *José Barbearia* foi confirmado!
 
-  if (!resultado.empty) {
-    msg.innerText = "Horário já agendado!";
-    return;
-  }
+*Serviço:* Corte (50min)
+*Quando:* ${data} às ${hora}
+*Profissional:* JOSE GILMARIO
+*Código:* ${codigo}
 
-  await addDoc(collection(db, "agendamentos"), {
-    nome,
-    data,
-    hora,
-    criadoEm: new Date()
-  });
+📍Endereço:
+Av. Otávio Rangel, 477 - Guariba - SP
 
-  msg.innerText = "Agendamento realizado!";
-};
+📍Mapa:
+https://maps.app.goo.gl/JVahTmuAYLfAiyx57`;
+
+  const numero = telefone.replace(/\D/g, "");
+  const url = "https://wa.me/55" + numero + "?text=" + encodeURIComponent(mensagem);
+
+  window.open(url, "_blank");
+}
 </script>
+
 </body>
 </html>
