@@ -1,145 +1,220 @@
+
 <!DOCTYPE html>
 
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>José Barbearia</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
 <style>
 body {
   margin: 0;
   font-family: Arial, sans-serif;
-  background: #0f172a;
+  background: linear-gradient(180deg,#0d1b2a,#000814);
   color: white;
-}
-
-.container {
-  padding: 40px 20px;
   text-align: center;
 }
 
-.card {
-  background: #1e293b;
-  padding: 20px;
-  border-radius: 12px;
-  max-width: 400px;
+.container {
+  max-width: 420px;
   margin: auto;
-  margin-top: 20px;
-}
-
-input, select {
-  width: 100%;
-  padding: 12px;
-  margin-top: 10px;
-  margin-bottom: 15px;
-  border-radius: 8px;
-  border: none;
-  font-size: 16px;
-}
-
-button {
-  background: #f59e0b;
-  border: none;
-  padding: 15px;
-  width: 100%;
-  color: white;
-  font-size: 16px;
-  border-radius: 8px;
-  cursor: pointer;
+  padding: 20px;
 }
 
 h1 {
-  margin-bottom: 10px;
+  margin-bottom: 5px;
 }
 
-.hidden {
-  display: none;
+.card {
+  background: #1b263b;
+  padding: 20px;
+  border-radius: 12px;
+  margin-top: 15px;
+}
+
+input, select, button {
+  width: 100%;
+  padding: 12px;
+  margin-top: 10px;
+  border-radius: 8px;
+  border: none;
+  font-size: 15px;
+}
+
+button {
+  background: #e63946;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+button:hover {
+  opacity: 0.9;
+}
+
+.servico-info {
+  font-size: 13px;
+  color: #ccc;
+}
+
+#msg {
+  margin-top: 10px;
+  font-weight: bold;
 }
 </style>
 
 </head>
-
 <body>
 
-<!-- Tela Inicial -->
-
-<div class="container" id="home">
+<div class="container">
   <h1>José Barbearia</h1>
-  <p>Agende seu horário online</p>
-  <button onclick="abrirAgendamento()">Agendar agora</button>
-</div>
+  <small>Agende seu horário online</small>
 
-<!-- Tela de Agendamento -->
-
-<div class="container hidden" id="agendamento">
   <div class="card">
-    <h2>Agendar Corte</h2>
+    <input type="text" id="nome" placeholder="Seu nome">
 
 ```
-<input id="nome" placeholder="Nome completo">
-<input id="telefone" placeholder="Telefone com DDD">
+<select id="servico">
+  <option value="">Selecione o serviço</option>
+  <option value="Corte (50min)">Corte - R$30 - 50min</option>
+  <option value="Barba (30min)">Barba - R$20 - 30min</option>
+  <option value="Corte + Barba (60min)">Corte + Barba - R$45 - 60min</option>
+  <option value="Corte Infantil (40min)">Corte Infantil - R$25 - 40min</option>
+</select>
 
-<label>Data</label>
 <input type="date" id="data">
 
-<label>Horário</label>
-<select id="hora"></select>
+<select id="hora">
+  <option value="">Selecione o horário</option>
+</select>
 
 <button onclick="agendar()">Confirmar Agendamento</button>
-<br><br>
-<button onclick="voltar()">Voltar</button>
+
+<p id="msg"></p>
 ```
 
   </div>
 </div>
 
-<script>
-// Mostrar tela
-function abrirAgendamento() {
-  document.getElementById("home").classList.add("hidden");
-  document.getElementById("agendamento").classList.remove("hidden");
-}
+<script type="module">
 
-function voltar() {
-  document.getElementById("agendamento").classList.add("hidden");
-  document.getElementById("home").classList.remove("hidden");
-}
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  getDocs,
+  query,
+  where
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-// Gerar horários de 10 em 10 minutos (09:00 às 19:00)
-const selectHora = document.getElementById("hora");
+const firebaseConfig = {
+  apiKey: "SUA_API_KEY",
+  authDomain: "jose-barbearia.firebaseapp.com",
+  projectId: "jose-barbearia",
+  storageBucket: "jose-barbearia.appspot.com",
+  messagingSenderId: "SEU_ID",
+  appId: "SEU_APP_ID"
+};
 
-function gerarHorarios() {
-  for (let h = 9; h <= 19; h++) {
-    for (let m = 0; m < 60; m += 10) {
-      let hora = String(h).padStart(2,'0') + ":" + String(m).padStart(2,'0');
-      let option = document.createElement("option");
-      option.value = hora;
-      option.text = hora;
-      selectHora.appendChild(option);
-    }
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// Salvar nome automático
+window.onload = function() {
+  const nomeSalvo = localStorage.getItem("clienteNome");
+  if (nomeSalvo) {
+    document.getElementById("nome").value = nomeSalvo;
+  }
+};
+
+// Gerar horários 10 em 10 minutos
+const horariosFixos = [];
+for (let h = 9; h <= 18; h++) {
+  for (let m = 0; m < 60; m += 10) {
+    if (h === 18 && m > 0) break;
+    horariosFixos.push(
+      String(h).padStart(2,"0") + ":" + String(m).padStart(2,"0")
+    );
   }
 }
-gerarHorarios();
 
-// Função agendar
-function agendar() {
+const selectHora = document.getElementById("hora");
+const dataInput = document.getElementById("data");
+
+dataInput.addEventListener("change", carregarHorarios);
+
+async function carregarHorarios() {
+  const data = dataInput.value;
+  selectHora.innerHTML = "<option>Carregando...</option>";
+
+  const q = query(
+    collection(db, "agendamentos"),
+    where("data", "==", data)
+  );
+
+  const snapshot = await getDocs(q);
+
+  let ocupados = [];
+  snapshot.forEach(doc => {
+    ocupados.push(doc.data().hora);
+  });
+
+  selectHora.innerHTML = "<option value=''>Selecione o horário</option>";
+
+  horariosFixos.forEach(h => {
+    if (!ocupados.includes(h)) {
+      let opt = document.createElement("option");
+      opt.value = h;
+      opt.textContent = h;
+      selectHora.appendChild(opt);
+    }
+  });
+}
+
+window.agendar = async function() {
   const nome = document.getElementById("nome").value;
-  const telefone = document.getElementById("telefone").value;
-  const data = document.getElementById("data").value;
-  const hora = document.getElementById("hora").value;
+  const servico = document.getElementById("servico").value;
+  const data = dataInput.value;
+  const hora = selectHora.value;
+  const msg = document.getElementById("msg");
 
-  if (!nome || !telefone || !data) {
-    alert("Preencha todos os campos");
+  if (!nome || !servico || !data || !hora) {
+    msg.innerText = "Preencha todos os campos!";
     return;
   }
+
+  const q = query(
+    collection(db, "agendamentos"),
+    where("data", "==", data),
+    where("hora", "==", hora)
+  );
+
+  const snap = await getDocs(q);
+
+  if (!snap.empty) {
+    msg.innerText = "Horário já reservado!";
+    carregarHorarios();
+    return;
+  }
+
+  await addDoc(collection(db, "agendamentos"), {
+    nome,
+    servico,
+    data,
+    hora,
+    criadoEm: new Date()
+  });
+
+  localStorage.setItem("clienteNome", nome);
 
   const codigo = Math.random().toString(36).substring(2,10).toUpperCase();
 
   const mensagem =
 `Olá, ${nome} o seu agendamento com a *José Barbearia* foi confirmado!
 
-*Serviço:* Corte (50min)
+*Serviço:* ${servico}
 *Quando:* ${data} às ${hora}
 *Profissional:* JOSE GILMARIO
 *Código:* ${codigo}
@@ -150,11 +225,13 @@ Av. Otávio Rangel, 477 - Guariba - SP
 📍Mapa:
 https://maps.app.goo.gl/JVahTmuAYLfAiyx57`;
 
-  const numero = telefone.replace(/\D/g, "");
-  const url = "https://wa.me/55" + numero + "?text=" + encodeURIComponent(mensagem);
-
+  const url = "https://wa.me/5516997369740?text=" + encodeURIComponent(mensagem);
   window.open(url, "_blank");
-}
+
+  msg.innerText = "Agendado com sucesso!";
+  carregarHorarios();
+};
+
 </script>
 
 </body>
