@@ -3,7 +3,7 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<title>José Barbearia</title>
+<title>Painel ADM - José Barbearia</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <style>
@@ -18,21 +18,26 @@ body {
   background: #1b263b;
   padding: 20px;
   border-radius: 10px;
-  max-width: 400px;
+  max-width: 500px;
   margin: auto;
 }
-input, select, button {
+input, button {
   width: 100%;
-  padding: 12px;
+  padding: 10px;
   margin-top: 10px;
   border-radius: 6px;
   border: none;
-  font-size: 16px;
 }
 button {
   background: #e63946;
   color: white;
   font-weight: bold;
+}
+.item {
+  background: #0d1b2a;
+  margin-top: 8px;
+  padding: 8px;
+  border-radius: 6px;
 }
 </style>
 
@@ -40,24 +45,24 @@ button {
 <body>
 
 <div class="container">
-  <h2>José Barbearia</h2>
+  <h2>Painel Administrativo</h2>
 
-  <input type="text" id="nome" placeholder="Seu nome">
-  <input type="date" id="data">
+  <h3>Ver agendamentos</h3>
+  <input type="date" id="dataBusca">
+  <button onclick="carregarAgendamentos()">Buscar</button>
 
-  <select id="servico">
-    <option value="">Selecione o serviço</option>
-    <option value="Corte|50">Corte – 50 min – R$30</option>
-    <option value="Barba|30">Barba – 30 min – R$20</option>
-    <option value="Corte+Barba|60">Corte + Barba – 60 min – R$45</option>
-    <option value="Infantil|40">Infantil – 40 min – R$25</option>
-  </select>
+  <div id="lista"></div>
 
-  <select id="hora">
-    <option value="">Selecione o horário</option>
-  </select>
+  <hr>
 
-<button onclick="agendar()">Agendar</button>
+  <h3>Bloquear horário</h3>
+  <input type="date" id="dataBloq">
+  <input type="time" id="horaBloq">
+  <button onclick="bloquearHorario()">Bloquear horário</button>
+
+  <h3>Bloquear dia inteiro</h3>
+  <input type="date" id="dataDia">
+  <button onclick="bloquearDia()">Bloquear dia</button>
 
   <p id="msg"></p>
 </div>
@@ -71,10 +76,12 @@ import {
   addDoc,
   getDocs,
   query,
-  where
+  where,
+  deleteDoc,
+  doc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-// ===== COLE SEU FIREBASE AQUI =====
+// MESMO FIREBASE DO SISTEMA
 const firebaseConfig = {
   apiKey: "SUA_API_KEY",
   authDomain: "jose-barbearia.firebaseapp.com",
@@ -87,61 +94,14 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// ===== WHATSAPP =====
-const telefone = "5516997369740";
-const endereco = "Av. Otávio Rangel, 477 - Guariba - SP";
-const mapa = "https://maps.app.goo.gl/JVahTmuAYLfAiyx57";
+window.carregarAgendamentos = async function() {
 
-// ===== GERAR CÓDIGO =====
-function gerarCodigo() {
-  return Math.random().toString(36).substring(2,10).toUpperCase();
-}
+  const data = document.getElementById("dataBusca").value;
+  const lista = document.getElementById("lista");
 
-// ===== HORÁRIOS BASE =====
-const horariosBase = [];
-for (let h = 9; h <= 18; h++) {
-  for (let m = 0; m < 60; m += 10) {
-    if (h === 18 && m > 0) continue;
-    horariosBase.push(
-      String(h).padStart(2,"0") + ":" +
-      String(m).padStart(2,"0")
-    );
-  }
-}
+  if (!data) return;
 
-const dataInput = document.getElementById("data");
-const servicoInput = document.getElementById("servico");
-const selectHora = document.getElementById("hora");
-
-// ===== CORREÇÃO IMPORTANTE =====
-// Sempre que mudar data ou serviço, recarrega horários
-dataInput.addEventListener("change", carregarHorarios);
-servicoInput.addEventListener("change", carregarHorarios);
-
-function horaParaMin(h) {
-  const [hh, mm] = h.split(":").map(Number);
-  return hh * 60 + mm;
-}
-
-function minParaHora(min) {
-  const h = Math.floor(min / 60);
-  const m = min % 60;
-  return String(h).padStart(2,"0") + ":" + String(m).padStart(2,"0");
-}
-
-async function carregarHorarios() {
-
-  const data = dataInput.value;
-  const servicoVal = servicoInput.value;
-
-  if (!data || !servicoVal) {
-    selectHora.innerHTML = "<option value=''>Selecione data e serviço</option>";
-    return;
-  }
-
-  const duracaoSelecionada = parseInt(servicoVal.split("|")[1]);
-
-  selectHora.innerHTML = "<option>Carregando...</option>";
+  lista.innerHTML = "Carregando...";
 
   const q = query(
     collection(db, "agendamentos"),
@@ -150,95 +110,61 @@ async function carregarHorarios() {
 
   const snapshot = await getDocs(q);
 
-  let ocupados = [];
+  lista.innerHTML = "";
 
-  snapshot.forEach(doc => {
-    const ag = doc.data();
-    const inicio = horaParaMin(ag.hora);
-    const fim = inicio + (ag.duracao || 60);
+  snapshot.forEach(docSnap => {
+    const ag = docSnap.data();
 
-    for (let t = inicio; t < fim; t += 10) {
-      ocupados.push(minParaHora(t));
-    }
+    const div = document.createElement("div");
+    div.className = "item";
+    div.innerHTML = `
+      <b>${ag.hora}</b> - ${ag.nome} (${ag.servico})
+      <br>
+      <button onclick="excluir('${docSnap.id}')">Excluir</button>
+    `;
+    lista.appendChild(div);
   });
 
-  selectHora.innerHTML = "<option value=''>Selecione o horário</option>";
-
-  horariosBase.forEach(h => {
-
-    const inicio = horaParaMin(h);
-    const fim = inicio + duracaoSelecionada;
-
-    let conflito = false;
-
-    for (let t = inicio; t < fim; t += 10) {
-      if (ocupados.includes(minParaHora(t))) {
-        conflito = true;
-        break;
-      }
-    }
-
-    if (!conflito) {
-      const opt = document.createElement("option");
-      opt.value = h;
-      opt.textContent = h;
-      selectHora.appendChild(opt);
-    }
-  });
+  if (lista.innerHTML === "") {
+    lista.innerHTML = "Nenhum agendamento";
+  }
 }
 
-// ===== AGENDAR =====
-window.agendar = async function() {
+window.excluir = async function(id) {
+  await deleteDoc(doc(db, "agendamentos", id));
+  alert("Agendamento removido");
+}
 
-  const nome = document.getElementById("nome").value;
-  const data = dataInput.value;
-  const hora = selectHora.value;
-  const servicoVal = servicoInput.value;
-  const msg = document.getElementById("msg");
+window.bloquearHorario = async function() {
 
-  if (!nome || !data || !hora || !servicoVal) {
-    msg.innerText = "Preencha tudo!";
-    return;
-  }
+  const data = document.getElementById("dataBloq").value;
+  const hora = document.getElementById("horaBloq").value;
 
-  const [servico, duracaoStr] = servicoVal.split("|");
-  const duracao = parseInt(duracaoStr);
-  const codigo = gerarCodigo();
+  if (!data || !hora) return;
 
-  await addDoc(collection(db, "agendamentos"), {
-    nome,
+  await addDoc(collection(db, "bloqueios"), {
     data,
     hora,
-    servico,
-    duracao,
-    codigo,
-    criadoEm: new Date()
+    duracao: 600 // bloqueia 10 horas (dia todo para esse horário)
   });
 
-  msg.innerText = "Agendamento confirmado!";
+  document.getElementById("msg").innerText = "Horário bloqueado!";
+}
 
-  const mensagem =
-`Olá, ${nome} o seu agendamento com a *José Barbearia* foi confirmado!
+window.bloquearDia = async function() {
 
-*Serviço:* ${servico} (${duracao}min)
-*Quando:* ${data} às ${hora}
-*Profissional:* JOSE GILMARIO
-*Código:* ${codigo}
+  const data = document.getElementById("dataDia").value;
 
-📍Endereço:
-${endereco}
+  if (!data) return;
 
-📍Mapa:
-${mapa}`;
+  await addDoc(collection(db, "bloqueios"), {
+    data,
+    hora: "09:00",
+    duracao: 600
+  });
 
-  window.open(
-    `https://wa.me/${telefone}?text=${encodeURIComponent(mensagem)}`,
-    "_blank"
-  );
-
-  document.getElementById("nome").value = "";
-  carregarHorarios();
-};
+  document.getElementById("msg").innerText = "Dia bloqueado!";
+}
 
 </script>
 
