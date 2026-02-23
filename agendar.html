@@ -6,25 +6,22 @@
 <title>José Barbearia - Agendamento</title>
 
 <style>
-body {
+body{
     margin:0;
-    font-family: Arial, sans-serif;
+    font-family:Arial;
     background:#0d0d0d;
     color:#fff;
 }
-
-.container {
+.container{
     max-width:400px;
     margin:auto;
     padding:20px;
 }
-
-h2 {
+h2{
     text-align:center;
     color:#c9a227;
 }
-
-input, select {
+input, select{
     width:100%;
     padding:12px;
     margin-bottom:10px;
@@ -33,176 +30,164 @@ input, select {
     background:#1a1a1a;
     color:#fff;
 }
-
-#horarios {
+#horarios{
     display:grid;
     grid-template-columns:repeat(3,1fr);
-    gap:8px;
-    margin:10px 0;
+    gap:6px;
 }
-
-.horario {
-    background:#1a1a1a;
+.horario{
     padding:10px;
     text-align:center;
-    border-radius:6px;
+    background:#1a1a1a;
     border:1px solid #333;
+    border-radius:6px;
     cursor:pointer;
 }
-
-.horario:hover {
-    border-color:#c9a227;
-}
-
-.selecionado {
+.horario:hover{border-color:#c9a227;}
+.selecionado{
     background:#c9a227;
     color:#000;
     font-weight:bold;
 }
-
-button {
+button{
     width:100%;
     padding:14px;
     background:#c9a227;
     border:none;
-    font-size:16px;
     font-weight:bold;
     border-radius:6px;
-    cursor:pointer;
 }
 </style>
 </head>
-
 <body>
 
 <div class="container">
 <h2>Agendar Horário</h2>
 
-<input type="text" id="nome" placeholder="Seu nome">
-<input type="tel" id="telefone" placeholder="Telefone">
+<input id="nome" placeholder="Seu nome">
+<input id="telefone" placeholder="Telefone">
 
 <select id="servico">
-<option value="">Escolha o serviço</option>
+<option value="">Serviço</option>
 <option value="50">Corte (50min)</option>
 <option value="30">Barba (30min)</option>
 <option value="60">Corte + Barba (60min)</option>
 <option value="40">Corte Infantil (40min)</option>
 </select>
 
-<input type="date" id="data">
+<input type="date" id="data" onchange="gerarHorarios()">
 
 <div id="horarios"></div>
 
 <input type="hidden" id="hora">
 
-<button onclick="confirmar()">Confirmar Agendamento</button>
+<button onclick="confirmar()">Confirmar</button>
 </div>
 
 <script>
+// ====== CONFIG ======
+const numeroBarbearia = "5516997369740";
 
-window.onload = function(){
-
-    document.getElementById("nome").value = localStorage.getItem("nome") || "";
-    document.getElementById("telefone").value = localStorage.getItem("telefone") || "";
-
-    // DATA HOJE CORRETA (SEM ERRO DE FUSO)
-    var hoje = new Date();
-    hoje.setHours(0,0,0,0);
-
-    var ano = hoje.getFullYear();
-    var mes = ("0"+(hoje.getMonth()+1)).slice(-2);
-    var dia = ("0"+hoje.getDate()).slice(-2);
-
-    var hojeFormatado = ano+"-"+mes+"-"+dia;
-
-    document.getElementById("data").setAttribute("min", hojeFormatado);
+// ====== FUNÇÕES DATA BRASIL ======
+function hojeBrasil(){
+    const agora = new Date();
+    const ano = agora.getFullYear();
+    const mes = ("0"+(agora.getMonth()+1)).slice(-2);
+    const dia = ("0"+agora.getDate()).slice(-2);
+    return `${ano}-${mes}-${dia}`;
 }
 
-document.getElementById("data").addEventListener("change", gerarHorarios);
+function horaAgora(){
+    const agora = new Date();
+    const h = ("0"+agora.getHours()).slice(-2);
+    const m = ("0"+agora.getMinutes()).slice(-2);
+    return `${h}:${m}`;
+}
 
+// ====== HORÁRIO DE FUNCIONAMENTO ======
+function horarioFuncionamento(dia){
+    if(dia == 0) return null; // domingo fechado
+
+    if(dia == 6){ // sábado
+        return [
+            ["08:30","20:00"]
+        ];
+    }
+
+    // segunda, quinta, sexta
+    if(dia==1 || dia==4 || dia==5){
+        return [
+            ["09:00","12:00"],
+            ["13:00","19:00"]
+        ];
+    }
+
+    // terça e quarta
+    if(dia==2 || dia==3){
+        return [
+            ["09:00","12:00"],
+            ["13:00","18:00"]
+        ];
+    }
+}
+
+// ====== GERAR HORÁRIOS ======
 function gerarHorarios(){
+    const data = document.getElementById("data").value;
+    const container = document.getElementById("horarios");
+    container.innerHTML="";
 
-    var container = document.getElementById("horarios");
-    container.innerHTML = "";
-
-    var data = document.getElementById("data").value;
     if(!data) return;
 
-    // DATA ESCOLHIDA CORRETA (SEM UTC)
-    var partes = data.split("-");
-    var dataEscolhida = new Date(partes[0], partes[1]-1, partes[2]);
-    dataEscolhida.setHours(0,0,0,0);
-
-    var hoje = new Date();
-    hoje.setHours(0,0,0,0);
-
-    if(dataEscolhida < hoje){
-        container.innerHTML = "<p>Não é possível agendar em datas passadas</p>";
+    if(data < hojeBrasil()){
+        container.innerHTML="Data passada";
         return;
     }
 
-    var diaSemana = dataEscolhida.getDay();
+    const partes = data.split("-");
+    const diaSemana = new Date(partes[0], partes[1]-1, partes[2]).getDay();
+    const funcionamento = horarioFuncionamento(diaSemana);
 
-    if(diaSemana === 0){
-        container.innerHTML = "<p>Fechado aos domingos</p>";
+    if(!funcionamento){
+        container.innerHTML="Fechado neste dia";
         return;
     }
 
-    var periodos = [];
+    const hoje = hojeBrasil();
+    const horaAtual = horaAgora();
 
-    if(diaSemana === 1 || diaSemana === 4 || diaSemana === 5){
-        periodos = [
-            {inicio:"09:00", fim:"12:00"},
-            {inicio:"13:00", fim:"19:00"}
-        ];
-    }
+    // horários já agendados
+    const agenda = JSON.parse(localStorage.getItem("agenda") || "{}");
+    const ocupados = agenda[data] || [];
 
-    if(diaSemana === 2 || diaSemana === 3){
-        periodos = [
-            {inicio:"09:00", fim:"12:00"},
-            {inicio:"13:00", fim:"18:00"}
-        ];
-    }
+    funcionamento.forEach(periodo=>{
+        let [inicio,fim] = periodo;
 
-    if(diaSemana === 6){
-        periodos = [
-            {inicio:"08:30", fim:"20:00"}
-        ];
-    }
+        let atual = new Date("2000-01-01 "+inicio);
+        const limite = new Date("2000-01-01 "+fim);
 
-    var agendaDia = JSON.parse(localStorage.getItem("agenda_"+data)) || [];
-    var agora = new Date();
+        while(atual < limite){
+            let h = ("0"+atual.getHours()).slice(-2);
+            let m = ("0"+atual.getMinutes()).slice(-2);
+            let horaTexto = `${h}:${m}`;
 
-    periodos.forEach(function(periodo){
+            // bloquear passado se for hoje
+            if(data == hoje && horaTexto <= horaAtual){
+                atual.setMinutes(atual.getMinutes()+10);
+                continue;
+            }
 
-        var [hInicio,mInicio] = periodo.inicio.split(":").map(Number);
-        var [hFim,mFim] = periodo.fim.split(":").map(Number);
+            // bloquear ocupados
+            if(!ocupados.includes(horaTexto)){
+                const div = document.createElement("div");
+                div.className="horario";
+                div.innerText=horaTexto;
 
-        var atual = new Date(dataEscolhida);
-        atual.setHours(hInicio,mInicio,0);
-
-        var fim = new Date(dataEscolhida);
-        fim.setHours(hFim,mFim,0);
-
-        while(atual < fim){
-
-            var horaTexto =
-                ("0"+atual.getHours()).slice(-2)+":"+
-                ("0"+atual.getMinutes()).slice(-2);
-
-            var horarioCompleto = new Date(data+"T"+horaTexto);
-
-            if(horarioCompleto > agora && !agendaDia.includes(horaTexto)){
-
-                var div = document.createElement("div");
-                div.className = "horario";
-                div.innerText = horaTexto;
-
-                div.onclick = function(){
+                div.onclick=function(){
                     document.querySelectorAll(".horario")
                     .forEach(x=>x.classList.remove("selecionado"));
                     this.classList.add("selecionado");
-                    document.getElementById("hora").value = this.innerText;
+                    document.getElementById("hora").value=horaTexto;
                 };
 
                 container.appendChild(div);
@@ -210,70 +195,94 @@ function gerarHorarios(){
 
             atual.setMinutes(atual.getMinutes()+10);
         }
-
     });
 }
 
+// ====== CONFIRMAR ======
 function confirmar(){
+    const nome = document.getElementById("nome").value;
+    const tel = document.getElementById("telefone").value;
+    const servicoSelect = document.getElementById("servico");
+    const duracao = parseInt(servicoSelect.value);
+    const servicoNome = servicoSelect.options[servicoSelect.selectedIndex].text;
+    const data = document.getElementById("data").value;
+    const hora = document.getElementById("hora").value;
 
-    var nome = document.getElementById("nome").value;
-    var telefone = document.getElementById("telefone").value;
-    var servico = parseInt(document.getElementById("servico").value);
-    var servicoTexto = document.getElementById("servico").selectedOptions[0].text;
-    var data = document.getElementById("data").value;
-    var hora = document.getElementById("hora").value;
-
-    if(!nome || !telefone || !servico || !data || !hora){
-        alert("Preencha todos os campos");
+    if(!nome || !tel || !duracao || !data || !hora){
+        alert("Preencha tudo");
         return;
     }
 
+    // salvar cliente
     localStorage.setItem("nome",nome);
-    localStorage.setItem("telefone",telefone);
+    localStorage.setItem("telefone",tel);
 
-    var agendaDia = JSON.parse(localStorage.getItem("agenda_"+data)) || [];
+    // gerar código
+    const codigo = Math.random().toString(36).substring(2,10).toUpperCase();
 
-    var partes = data.split("-");
-    var inicio = new Date(partes[0], partes[1]-1, partes[2]);
+    // salvar agenda
+    const agenda = JSON.parse(localStorage.getItem("agenda") || "{}");
+    if(!agenda[data]) agenda[data]=[];
 
-    var [h,m] = hora.split(":").map(Number);
-    inicio.setHours(h,m,0);
-
-    var total = servico + 10;
-
-    for(var i=0;i<total;i+=10){
-
-        var t = new Date(inicio);
-        t.setMinutes(inicio.getMinutes()+i);
-
-        var horaBloqueio =
-            ("0"+t.getHours()).slice(-2)+":"+
-            ("0"+t.getMinutes()).slice(-2);
-
-        if(!agendaDia.includes(horaBloqueio)){
-            agendaDia.push(horaBloqueio);
-        }
+    // bloquear tempo do serviço
+    let atual = new Date("2000-01-01 "+hora);
+    for(let i=0;i<duracao;i+=10){
+        let h=("0"+atual.getHours()).slice(-2);
+        let m=("0"+atual.getMinutes()).slice(-2);
+        agenda[data].push(`${h}:${m}`);
+        atual.setMinutes(atual.getMinutes()+10);
     }
 
-    localStorage.setItem("agenda_"+data,JSON.stringify(agendaDia));
+    localStorage.setItem("agenda",JSON.stringify(agenda));
 
-    var mensagem =
-`Olá, ${nome} seu agendamento foi confirmado!
+    // mensagem cliente
+    const msgCliente =
+`Olá, ${nome} o seu agendamento com a *José barbearia* foi confirmado!
 
-Serviço: ${servicoTexto}
+*Serviço:* ${servicoNome}
+*Quando:* ${data} às ${hora}
+*Profissional:* JOSE GILMARIO
+*Código:* ${codigo}
+
+📍Endereço:
+Av. Otávio Rangel, 477 - Guariba - SP
+
+📍Mapa:
+https://maps.app.goo.gl/JVahTmuAYLfAiyx57`;
+
+    // mensagem para você
+    const msgBarbearia =
+`NOVO AGENDAMENTO
+
+Cliente: ${nome}
+Telefone: ${tel}
+Serviço: ${servicoNome}
 Data: ${data}
 Hora: ${hora}
+Código: ${codigo}`;
 
-Endereço:
-Av. Otávio Rangel, 477 - Guariba - SP`;
+    // abre WhatsApp cliente
+    window.open(
+        `https://wa.me/55${tel}?text=${encodeURIComponent(msgCliente)}`,
+        "_blank"
+    );
 
-    var numero = "5516997369740";
-    var url = "https://wa.me/"+numero+"?text="+encodeURIComponent(mensagem);
+    // abre WhatsApp barbearia
+    window.open(
+        `https://wa.me/${numeroBarbearia}?text=${encodeURIComponent(msgBarbearia)}`,
+        "_blank"
+    );
 
-    window.open(url,"_blank");
-
+    alert("Agendamento realizado!");
     gerarHorarios();
 }
+
+// ====== INÍCIO ======
+window.onload=function(){
+    document.getElementById("nome").value = localStorage.getItem("nome") || "";
+    document.getElementById("telefone").value = localStorage.getItem("telefone") || "";
+    document.getElementById("data").min = hojeBrasil();
+};
 </script>
 
 </body>
