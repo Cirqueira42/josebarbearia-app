@@ -101,12 +101,21 @@ button {
 <script>
 
 window.onload = function(){
+
     document.getElementById("nome").value = localStorage.getItem("nome") || "";
     document.getElementById("telefone").value = localStorage.getItem("telefone") || "";
 
-    // Bloquear datas passadas
-    var hoje = new Date().toISOString().split("T")[0];
-    document.getElementById("data").setAttribute("min", hoje);
+    // DATA HOJE CORRETA (SEM ERRO DE FUSO)
+    var hoje = new Date();
+    hoje.setHours(0,0,0,0);
+
+    var ano = hoje.getFullYear();
+    var mes = ("0"+(hoje.getMonth()+1)).slice(-2);
+    var dia = ("0"+hoje.getDate()).slice(-2);
+
+    var hojeFormatado = ano+"-"+mes+"-"+dia;
+
+    document.getElementById("data").setAttribute("min", hojeFormatado);
 }
 
 document.getElementById("data").addEventListener("change", gerarHorarios);
@@ -119,18 +128,20 @@ function gerarHorarios(){
     var data = document.getElementById("data").value;
     if(!data) return;
 
+    // DATA ESCOLHIDA CORRETA (SEM UTC)
+    var partes = data.split("-");
+    var dataEscolhida = new Date(partes[0], partes[1]-1, partes[2]);
+    dataEscolhida.setHours(0,0,0,0);
+
     var hoje = new Date();
     hoje.setHours(0,0,0,0);
-
-    var dataEscolhida = new Date(data);
-    dataEscolhida.setHours(0,0,0,0);
 
     if(dataEscolhida < hoje){
         container.innerHTML = "<p>Não é possível agendar em datas passadas</p>";
         return;
     }
 
-    var diaSemana = new Date(data).getDay();
+    var diaSemana = dataEscolhida.getDay();
 
     if(diaSemana === 0){
         container.innerHTML = "<p>Fechado aos domingos</p>";
@@ -167,10 +178,10 @@ function gerarHorarios(){
         var [hInicio,mInicio] = periodo.inicio.split(":").map(Number);
         var [hFim,mFim] = periodo.fim.split(":").map(Number);
 
-        var atual = new Date();
+        var atual = new Date(dataEscolhida);
         atual.setHours(hInicio,mInicio,0);
 
-        var fim = new Date();
+        var fim = new Date(dataEscolhida);
         fim.setHours(hFim,mFim,0);
 
         while(atual < fim){
@@ -179,9 +190,9 @@ function gerarHorarios(){
                 ("0"+atual.getHours()).slice(-2)+":"+
                 ("0"+atual.getMinutes()).slice(-2);
 
-            var horaDataCompleta = new Date(data+"T"+horaTexto);
+            var horarioCompleto = new Date(data+"T"+horaTexto);
 
-            if(horaDataCompleta > agora && !agendaDia.includes(horaTexto)){
+            if(horarioCompleto > agora && !agendaDia.includes(horaTexto)){
 
                 var div = document.createElement("div");
                 div.className = "horario";
@@ -222,7 +233,11 @@ function confirmar(){
 
     var agendaDia = JSON.parse(localStorage.getItem("agenda_"+data)) || [];
 
-    var inicio = new Date(data+"T"+hora);
+    var partes = data.split("-");
+    var inicio = new Date(partes[0], partes[1]-1, partes[2]);
+
+    var [h,m] = hora.split(":").map(Number);
+    inicio.setHours(h,m,0);
 
     var total = servico + 10;
 
