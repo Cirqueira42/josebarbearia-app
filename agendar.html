@@ -68,6 +68,8 @@ button {
 </div>
 
 <script>
+
+    <script>
 function enviarWhats() {
     var nome = document.getElementById("nome").value;
     var telefone = document.getElementById("telefone").value;
@@ -82,11 +84,15 @@ Serviço: ${servico}%0A
 Data: ${data}%0A
 Hora: ${hora}`;
 
-    var numero = "55SEUNUMERO"; // coloque seu WhatsApp
+    var numero = "5516997369740";
+    var url = `https://wa.me/${numero}?text=${mensagem}`;
 
-    window.open(`https://wa.me/${numero}?text=${mensagem}`, "_blank");
+    window.open(url, "_blank");
 }
 </script>
+ 
+    
+    
+    
 
-</body>
-</html>
+   
