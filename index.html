@@ -50,10 +50,10 @@ button {
 
   <select id="servico">
     <option value="">Selecione o serviço</option>
-    <option value="Corte|50">Corte – 50 min</option>
-    <option value="Barba|30">Barba – 30 min</option>
-    <option value="Corte+Barba|60">Corte + Barba – 60 min</option>
-    <option value="Infantil|40">Infantil – 40 min</option>
+    <option value="Corte|50">Corte – 50 min – R$30</option>
+    <option value="Barba|30">Barba – 30 min – R$20</option>
+    <option value="Corte+Barba|60">Corte + Barba – 60 min – R$45</option>
+    <option value="Infantil|40">Infantil – 40 min – R$25</option>
   </select>
 
   <select id="hora">
@@ -89,37 +89,45 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// gerar horários de 10 em 10 minutos
-const horariosFixos = [];
+// Gera horários de 09:00 até 18:00 de 10 em 10 minutos
+const horariosBase = [];
 for (let h = 9; h <= 18; h++) {
   for (let m = 0; m < 60; m += 10) {
     if (h === 18 && m > 0) continue;
-    horariosFixos.push(
+    horariosBase.push(
       String(h).padStart(2, "0") + ":" +
       String(m).padStart(2, "0")
     );
   }
 }
 
-const selectHora = document.getElementById("hora");
 const dataInput = document.getElementById("data");
+const servicoInput = document.getElementById("servico");
+const selectHora = document.getElementById("hora");
 
 dataInput.addEventListener("change", carregarHorarios);
+servicoInput.addEventListener("change", carregarHorarios);
 
-function horaParaMinutos(hora) {
-  const [h, m] = hora.split(":").map(Number);
-  return h * 60 + m;
+function horaParaMin(h) {
+  const [hh, mm] = h.split(":").map(Number);
+  return hh * 60 + mm;
 }
 
-function minutosParaHora(min) {
+function minParaHora(min) {
   const h = Math.floor(min / 60);
   const m = min % 60;
-  return String(h).padStart(2, "0") + ":" +
-         String(m).padStart(2, "0");
+  return String(h).padStart(2,"0") + ":" + String(m).padStart(2,"0");
 }
 
 async function carregarHorarios() {
+
   const data = dataInput.value;
+  const servico = servicoInput.value;
+
+  if (!data || !servico) return;
+
+  const duracao = parseInt(servico.split("|")[1]);
+
   selectHora.innerHTML = "<option>Carregando...</option>";
 
   const q = query(
@@ -133,27 +141,71 @@ async function carregarHorarios() {
 
   snapshot.forEach(doc => {
     const ag = doc.data();
-    const inicio = horaParaMinutos(ag.hora);
+    const inicio = horaParaMin(ag.hora);
     const fim = inicio + ag.duracao;
 
     for (let t = inicio; t < fim; t += 10) {
-      ocupados.push(minutosParaHora(t));
+      ocupados.push(minParaHora(t));
     }
   });
 
+  // Agora monta lista só com horários livres que cabem na duração
   selectHora.innerHTML = "<option value=''>Selecione o horário</option>";
 
-  horariosFixos.forEach(h => {
-    if (!ocupados.includes(h)) {
+  horariosBase.forEach(h => {
+
+    const inicio = horaParaMin(h);
+    const fim = inicio + duracao;
+
+    let conflito = false;
+
+    for (let t = inicio; t < fim; t += 10) {
+      if (ocupados.includes(minParaHora(t))) {
+        conflito = true;
+        break;
+      }
+    }
+
+    if (!conflito) {
       const opt = document.createElement("option");
       opt.value = h;
       opt.textContent = h;
       selectHora.appendChild(opt);
     }
+
   });
 }
 
 window.agendar = async function() {
+
   const nome = document.getElementById("nome").value;
   const data = dataInput.value;
-  const hora = se
+  const hora = selectHora.value;
+  const servicoVal = servicoInput.value;
+  const msg = document.getElementById("msg");
+
+  if (!nome || !data || !hora || !servicoVal) {
+    msg.innerText = "Preencha tudo!";
+    return;
+  }
+
+  const [servico, duracaoStr] = servicoVal.split("|");
+  const duracao = parseInt(duracaoStr);
+
+  await addDoc(collection(db, "agendamentos"), {
+    nome,
+    data,
+    hora,
+    servico,
+    duracao,
+    criadoEm: new Date()
+  });
+
+  msg.innerText = "Agendamento realizado!";
+  carregarHorarios();
+};
+
+</script>
+
+</body>
+</html>
