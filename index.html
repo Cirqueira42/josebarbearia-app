@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 
 <html lang="pt-br">
@@ -9,33 +8,28 @@
 
 <style>
 body {
-  margin: 0;
-  font-family: Arial, sans-serif;
-  background: linear-gradient(180deg,#0d1b2a,#000814);
+  font-family: Arial;
+  background: #0d1b2a;
   color: white;
   text-align: center;
+  padding: 20px;
 }
 
 .container {
-  max-width: 420px;
-  margin: auto;
-  padding: 20px;
-}
-
-.card {
   background: #1b263b;
   padding: 20px;
-  border-radius: 12px;
-  margin-top: 15px;
+  border-radius: 10px;
+  max-width: 400px;
+  margin: auto;
 }
 
 input, select, button {
   width: 100%;
   padding: 12px;
   margin-top: 10px;
-  border-radius: 8px;
+  border-radius: 6px;
   border: none;
-  font-size: 15px;
+  font-size: 16px;
 }
 
 button {
@@ -44,9 +38,12 @@ button {
   font-weight: bold;
 }
 
-#msg {
-  margin-top: 10px;
-  font-weight: bold;
+h1 {
+  margin-bottom: 5px;
+}
+
+small {
+  color: #ccc;
 }
 </style>
 
@@ -55,32 +52,27 @@ button {
 
 <div class="container">
   <h1>José Barbearia</h1>
-  <small>Agende seu horário online</small>
+  <small>Agende seu horário</small>
 
-  <div class="card">
-    <input type="text" id="nome" placeholder="Seu nome">
+  <input type="text" id="nome" placeholder="Seu nome">
 
-```
-<select id="servico">
-  <option value="">Selecione o serviço</option>
-  <option value="Corte (50min)">Corte - R$30 - 50min</option>
-  <option value="Barba (30min)">Barba - R$20 - 30min</option>
-  <option value="Corte + Barba (60min)">Corte + Barba - R$45 - 60min</option>
-  <option value="Corte Infantil (40min)">Corte Infantil - R$25 - 40min</option>
-</select>
+  <input type="date" id="data">
 
-<input type="date" id="data">
+  <select id="servico">
+    <option value="">Selecione o serviço</option>
+    <option value="Corte|50">Corte - 50 min</option>
+    <option value="Barba|30">Barba - 30 min</option>
+    <option value="Corte+Barba|60">Corte + Barba - 60 min</option>
+    <option value="Infantil|40">Corte Infantil - 40 min</option>
+  </select>
 
-<select id="hora">
-  <option value="">Selecione o horário</option>
-</select>
+  <select id="hora">
+    <option value="">Selecione o horário</option>
+  </select>
 
-<button onclick="agendar()">Confirmar Agendamento</button>
+<button onclick="agendar()">Agendar</button>
 
-<p id="msg"></p>
-```
-
-  </div>
+  <p id="msg"></p>
 </div>
 
 <script type="module">
@@ -95,34 +87,27 @@ import {
   where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-// CONFIGURAÇÃO DO FIREBASE (já ajustada para seu projeto)
+/* COLE SEU firebaseConfig AQUI */
 const firebaseConfig = {
-  apiKey: "AIzaSyD-COLE_AQUI_SUA_API",
+  apiKey: "SUA_API_KEY",
   authDomain: "jose-barbearia.firebaseapp.com",
   projectId: "jose-barbearia",
   storageBucket: "jose-barbearia.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "1:123456789:web:abc123"
+  messagingSenderId: "SEU_ID",
+  appId: "SEU_APP_ID"
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// Salvar nome automaticamente
-window.onload = function() {
-  const nomeSalvo = localStorage.getItem("clienteNome");
-  if (nomeSalvo) {
-    document.getElementById("nome").value = nomeSalvo;
-  }
-};
-
 // Horários de 10 em 10 minutos
 const horariosFixos = [];
 for (let h = 9; h <= 18; h++) {
   for (let m = 0; m < 60; m += 10) {
-    if (h === 18 && m > 0) break;
+    if (h === 18 && m > 0) continue;
     horariosFixos.push(
-      String(h).padStart(2,"0") + ":" + String(m).padStart(2,"0")
+      String(h).padStart(2, "0") + ":" +
+      String(m).padStart(2, "0")
     );
   }
 }
@@ -148,25 +133,19 @@ async function carregarHorarios() {
   snapshot.forEach(doc => {
     const ag = doc.data();
     const horaInicio = ag.hora;
-    const servico = ag.servico;
-
-    let duracao = 0;
-    if (servico.includes("60")) duracao = 60;
-    else if (servico.includes("50")) duracao = 50;
-    else if (servico.includes("40")) duracao = 40;
-    else if (servico.includes("30")) duracao = 30;
+    const duracao = ag.duracao || 0;
 
     let [h, m] = horaInicio.split(":").map(Number);
-    let totalMin = h * 60 + m;
+    let total = h * 60 + m;
 
     for (let i = 0; i < duracao; i += 10) {
-      let min = totalMin + i;
+      let min = total + i;
       let hh = Math.floor(min / 60);
       let mm = min % 60;
 
       ocupados.push(
-        String(hh).padStart(2,"0") + ":" +
-        String(mm).padStart(2,"0")
+        String(hh).padStart(2, "0") + ":" +
+        String(mm).padStart(2, "0")
       );
     }
   });
@@ -185,45 +164,44 @@ async function carregarHorarios() {
 
 window.agendar = async function() {
   const nome = document.getElementById("nome").value;
-  const servico = document.getElementById("servico").value;
   const data = dataInput.value;
   const hora = selectHora.value;
+  const servicoSelect = document.getElementById("servico").value;
   const msg = document.getElementById("msg");
 
-  if (!nome || !servico || !data || !hora) {
-    msg.innerText = "Preencha todos os campos!";
+  if (!nome || !data || !hora || !servicoSelect) {
+    msg.innerText = "Preencha tudo!";
+    return;
+  }
+
+  const [servico, duracaoStr] = servicoSelect.split("|");
+  const duracao = parseInt(duracaoStr);
+
+  // Segurança contra duplicação
+  const q = query(
+    collection(db, "agendamentos"),
+    where("data", "==", data),
+    where("hora", "==", hora)
+  );
+
+  const snap = await getDocs(q);
+  if (!snap.empty) {
+    msg.innerText = "Horário já ocupado!";
+    carregarHorarios();
     return;
   }
 
   await addDoc(collection(db, "agendamentos"), {
     nome,
-    servico,
     data,
     hora,
+    servico,
+    duracao,
     criadoEm: new Date()
   });
 
-  localStorage.setItem("clienteNome", nome);
-
-  const codigo = Math.random().toString(36).substring(2,10).toUpperCase();
-
-  const mensagem =
-`Olá, ${nome} o seu agendamento com a *José Barbearia* foi confirmado!
-
-*Serviço:* ${servico}
-*Quando:* ${data} às ${hora}
-*Profissional:* JOSE GILMARIO
-*Código:* ${codigo}
-
-📍Endereço:
-Av. Otávio Rangel, 477 - Guariba - SP
-
-📍Mapa:
-https://maps.app.goo.gl/JVahTmuAYLfAiyx57`;
-
-  window.open("https://wa.me/5516997369740?text=" + encodeURIComponent(mensagem), "_blank");
-
   msg.innerText = "Agendado com sucesso!";
+  document.getElementById("nome").value = "";
   carregarHorarios();
 };
 
