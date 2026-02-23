@@ -1,99 +1,75 @@
 
- 
-    
-    
-    ```html
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Barbearia - Agendamento</title>
+<title>José Barbearia - Agendamento</title>
 
 <style>
 body {
-    margin: 0;
-    font-family: 'Segoe UI', sans-serif;
-    background: #0d0d0d;
-    color: #fff;
+    margin:0;
+    font-family: Arial, sans-serif;
+    background:#0d0d0d;
+    color:#fff;
 }
 
 .container {
-    max-width: 400px;
-    margin: auto;
-    padding: 25px;
+    max-width:400px;
+    margin:auto;
+    padding:20px;
 }
 
 h2 {
-    text-align: center;
-    color: #c9a227;
-    letter-spacing: 1px;
+    text-align:center;
+    color:#c9a227;
 }
 
 input, select {
-    width: 100%;
-    padding: 14px;
-    margin-bottom: 12px;
-    border: 1px solid #333;
-    background: #1a1a1a;
-    color: #fff;
-    border-radius: 8px;
-    font-size: 15px;
-}
-
-input:focus, select:focus {
-    border-color: #c9a227;
-    outline: none;
-}
-
-label {
-    font-size: 14px;
-    color: #c9a227;
+    width:100%;
+    padding:12px;
+    margin-bottom:10px;
+    border-radius:6px;
+    border:1px solid #333;
+    background:#1a1a1a;
+    color:#fff;
 }
 
 #horarios {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
-    margin-top: 10px;
-    margin-bottom: 15px;
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:8px;
+    margin:10px 0;
 }
 
 .horario {
-    background: #1a1a1a;
-    padding: 10px;
-    text-align: center;
-    border-radius: 8px;
-    border: 1px solid #333;
-    cursor: pointer;
-    transition: 0.3s;
+    background:#1a1a1a;
+    padding:10px;
+    text-align:center;
+    border-radius:6px;
+    border:1px solid #333;
+    cursor:pointer;
 }
 
 .horario:hover {
-    border-color: #c9a227;
+    border-color:#c9a227;
 }
 
-.horario.selecionado {
-    background: #c9a227;
-    color: #000;
-    font-weight: bold;
+.selecionado {
+    background:#c9a227;
+    color:#000;
+    font-weight:bold;
 }
 
 button {
-    width: 100%;
-    padding: 15px;
-    background: #c9a227;
-    border: none;
-    color: #000;
-    font-size: 16px;
-    font-weight: bold;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: 0.3s;
-}
-
-button:hover {
-    background: #e6b800;
+    width:100%;
+    padding:14px;
+    background:#c9a227;
+    border:none;
+    font-size:16px;
+    font-weight:bold;
+    border-radius:6px;
+    cursor:pointer;
 }
 </style>
 </head>
@@ -108,15 +84,14 @@ button:hover {
 
 <select id="servico">
 <option value="">Escolha o serviço</option>
-<option>Corte</option>
-<option>Barba</option>
-<option>Corte + Barba</option>
-<option>Corte Infantil</option>
+<option value="50">Corte (50min)</option>
+<option value="30">Barba (30min)</option>
+<option value="60">Corte + Barba (60min)</option>
+<option value="40">Corte Infantil (40min)</option>
 </select>
 
 <input type="date" id="data">
 
-<label>Escolha o horário</label>
 <div id="horarios"></div>
 
 <input type="hidden" id="hora">
@@ -126,70 +101,154 @@ button:hover {
 
 <script>
 
-// Auto preencher
-window.onload = function () {
+window.onload = function(){
     document.getElementById("nome").value = localStorage.getItem("nome") || "";
     document.getElementById("telefone").value = localStorage.getItem("telefone") || "";
-    gerarHorarios();
-};
+}
 
-function gerarHorarios() {
+document.getElementById("data").addEventListener("change", gerarHorarios);
+
+function gerarHorarios(){
+
     var container = document.getElementById("horarios");
     container.innerHTML = "";
 
-    for (var h = 9; h <= 19; h++) {
-        var horaTexto = (h < 10 ? "0" : "") + h + ":00";
+    var data = document.getElementById("data").value;
+    if(!data) return;
 
-        var div = document.createElement("div");
-        div.className = "horario";
-        div.innerText = horaTexto;
+    var diaSemana = new Date(data).getDay();
 
-        div.onclick = function () {
-            document.querySelectorAll(".horario").forEach(x => x.classList.remove("selecionado"));
-            this.classList.add("selecionado");
-            document.getElementById("hora").value = this.innerText;
-        };
-
-        container.appendChild(div);
+    if(diaSemana === 0){
+        container.innerHTML = "<p>Fechado aos domingos</p>";
+        return;
     }
+
+    var periodos = [];
+
+    // Segunda, Quinta, Sexta
+    if(diaSemana === 1 || diaSemana === 4 || diaSemana === 5){
+        periodos = [
+            {inicio:"09:00", fim:"12:00"},
+            {inicio:"13:00", fim:"19:00"}
+        ];
+    }
+
+    // Terça e Quarta
+    if(diaSemana === 2 || diaSemana === 3){
+        periodos = [
+            {inicio:"09:00", fim:"12:00"},
+            {inicio:"13:00", fim:"18:00"}
+        ];
+    }
+
+    // Sábado
+    if(diaSemana === 6){
+        periodos = [
+            {inicio:"08:30", fim:"20:00"}
+        ];
+    }
+
+    var agendaDia = JSON.parse(localStorage.getItem("agenda_"+data)) || [];
+
+    periodos.forEach(function(periodo){
+
+        var [hInicio,mInicio] = periodo.inicio.split(":").map(Number);
+        var [hFim,mFim] = periodo.fim.split(":").map(Number);
+
+        var atual = new Date();
+        atual.setHours(hInicio,mInicio,0);
+
+        var fim = new Date();
+        fim.setHours(hFim,mFim,0);
+
+        while(atual < fim){
+
+            var horaTexto =
+                ("0"+atual.getHours()).slice(-2)+":"+
+                ("0"+atual.getMinutes()).slice(-2);
+
+            if(!agendaDia.includes(horaTexto)){
+
+                var div = document.createElement("div");
+                div.className = "horario";
+                div.innerText = horaTexto;
+
+                div.onclick = function(){
+                    document.querySelectorAll(".horario")
+                    .forEach(x=>x.classList.remove("selecionado"));
+                    this.classList.add("selecionado");
+                    document.getElementById("hora").value = this.innerText;
+                };
+
+                container.appendChild(div);
+            }
+
+            atual.setMinutes(atual.getMinutes()+10);
+        }
+
+    });
 }
 
-function confirmar() {
+function confirmar(){
+
     var nome = document.getElementById("nome").value;
     var telefone = document.getElementById("telefone").value;
-    var servico = document.getElementById("servico").value;
+    var servico = parseInt(document.getElementById("servico").value);
+    var servicoTexto = document.getElementById("servico").selectedOptions[0].text;
     var data = document.getElementById("data").value;
     var hora = document.getElementById("hora").value;
 
-    if (!nome || !telefone || !servico || !data || !hora) {
+    if(!nome || !telefone || !servico || !data || !hora){
         alert("Preencha todos os campos");
         return;
     }
 
-    localStorage.setItem("nome", nome);
-    localStorage.setItem("telefone", telefone);
+    localStorage.setItem("nome",nome);
+    localStorage.setItem("telefone",telefone);
+
+    var agendaDia = JSON.parse(localStorage.getItem("agenda_"+data)) || [];
+
+    var inicio = new Date();
+    var [h,m] = hora.split(":").map(Number);
+    inicio.setHours(h,m,0);
+
+    // duração + 10 minutos intervalo
+    var total = servico + 10;
+
+    for(var i=0;i<total;i+=10){
+
+        var t = new Date(inicio);
+        t.setMinutes(inicio.getMinutes()+i);
+
+        var horaBloqueio =
+            ("0"+t.getHours()).slice(-2)+":"+
+            ("0"+t.getMinutes()).slice(-2);
+
+        if(!agendaDia.includes(horaBloqueio)){
+            agendaDia.push(horaBloqueio);
+        }
+    }
+
+    localStorage.setItem("agenda_"+data,JSON.stringify(agendaDia));
 
     var mensagem =
-`Novo Agendamento
+`Olá, ${nome} seu agendamento foi confirmado!
 
-Cliente: ${nome}
-Telefone: ${telefone}
-Serviço: ${servico}
+Serviço: ${servicoTexto}
 Data: ${data}
 Hora: ${hora}
 
 Endereço:
-Av. Otável Rangel, 477`;
+Av. Otávio Rangel, 477 - Guariba - SP`;
 
     var numero = "5516997369740";
-    var urlWhats = "https://wa.me/" + numero + "?text=" + encodeURIComponent(mensagem);
-    window.open(urlWhats, "_blank");
+    var url = "https://wa.me/"+numero+"?text="+encodeURIComponent(mensagem);
+
+    window.open(url,"_blank");
+
+    gerarHorarios();
 }
 </script>
 
 </body>
 </html>
-```
-
-
-   
