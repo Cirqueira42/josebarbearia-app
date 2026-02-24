@@ -1,171 +1,219 @@
 <!DOCTYPE html>
 
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>Painel ADM - José Barbearia</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jose Barbearia</title>
 
 <style>
+* {
+margin: 0;
+padding: 0;
+box-sizing: border-box;
+font-family: Arial, sans-serif;
+}
+
 body {
-  font-family: Arial;
-  background: #0d1b2a;
-  color: white;
-  text-align: center;
-  padding: 20px;
+background: #0e0e0e;
+color: #fff;
+display: flex;
+justify-content: center;
+align-items: center;
+min-height: 100vh;
 }
+
 .container {
-  background: #1b263b;
-  padding: 20px;
-  border-radius: 10px;
-  max-width: 500px;
-  margin: auto;
+width: 95%;
+max-width: 420px;
+background: #1c1c1c;
+padding: 25px;
+border-radius: 12px;
+box-shadow: 0 0 20px rgba(0,0,0,0.6);
 }
-input, button {
-  width: 100%;
-  padding: 10px;
-  margin-top: 10px;
-  border-radius: 6px;
-  border: none;
+
+h1 {
+text-align: center;
+margin-bottom: 20px;
+font-size: 26px;
 }
+
+label {
+font-size: 14px;
+margin-top: 12px;
+display: block;
+}
+
+input, select {
+width: 100%;
+padding: 12px;
+margin-top: 6px;
+border-radius: 6px;
+border: none;
+background: #2a2a2a;
+color: #fff;
+font-size: 16px;
+}
+
 button {
-  background: #e63946;
-  color: white;
-  font-weight: bold;
+width: 100%;
+padding: 14px;
+margin-top: 18px;
+border: none;
+border-radius: 6px;
+background: #00c853;
+color: #fff;
+font-size: 17px;
+font-weight: bold;
+cursor: pointer;
 }
-.item {
-  background: #0d1b2a;
-  margin-top: 8px;
-  padding: 8px;
-  border-radius: 6px;
+
+button:hover {
+background: #00a844;
+}
+
+.info {
+text-align: center;
+margin-top: 12px;
+font-size: 13px;
+color: #aaa;
 }
 </style>
+
+<!-- Firebase -->
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+<script>
+// ===== CONFIGURE SEU FIREBASE =====
+const firebaseConfig = {
+apiKey: "SUA_API_KEY",
+authDomain: "SEU_PROJETO.firebaseapp.com",
+databaseURL: "https://SEU_PROJETO-default-rtdb.firebaseio.com/",
+projectId: "SEU_PROJETO",
+storageBucket: "SEU_PROJETO.appspot.com",
+messagingSenderId: "000000000",
+appId: "APP_ID"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+</script>
 
 </head>
 <body>
 
 <div class="container">
-  <h2>Painel Administrativo</h2>
+<h1>Jose Barbearia</h1>
 
-  <h3>Ver agendamentos</h3>
-  <input type="date" id="dataBusca">
-  <button onclick="carregarAgendamentos()">Buscar</button>
+<label>Nome</label> <input type="text" id="nome" placeholder="Digite seu nome">
 
-  <div id="lista"></div>
+<label>Serviço</label> <select id="servico">
 
-  <hr>
+<option value="">Selecione</option>
+<option value="Corte - 30">Corte - R$30</option>
+<option value="Barba - 20">Barba - R$20</option>
+<option value="Corte + Barba - 45">Corte + Barba - R$45</option>
+</select>
 
-  <h3>Bloquear horário</h3>
-  <input type="date" id="dataBloq">
-  <input type="time" id="horaBloq">
-  <button onclick="bloquearHorario()">Bloquear horário</button>
+<label>Data</label> <input type="date" id="data">
 
-  <h3>Bloquear dia inteiro</h3>
-  <input type="date" id="dataDia">
-  <button onclick="bloquearDia()">Bloquear dia</button>
+<label>Horário</label> <select id="hora">
 
-  <p id="msg"></p>
+<option>Selecione a data</option>
+</select>
+
+<button onclick="agendar()">Agendar</button>
+
+<div class="info">Horários ocupados não aparecem</div>
 </div>
 
-<script type="module">
+<script>
+const horasPadrao = [
+"08:00","09:00","10:00","11:00",
+"13:00","14:00","15:00","16:00","17:00","18:00"
+];
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import {
-  getFirestore,
-  collection,
-  addDoc,
-  getDocs,
-  query,
-  where,
-  deleteDoc,
-  doc
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+const dataInput = document.getElementById("data");
+const horaSelect = document.getElementById("hora");
 
-// MESMO FIREBASE DO SISTEMA
-const firebaseConfig = {
-  apiKey: "SUA_API_KEY",
-  authDomain: "jose-barbearia.firebaseapp.com",
-  projectId: "jose-barbearia",
-  storageBucket: "jose-barbearia.appspot.com",
-  messagingSenderId: "SEU_ID",
-  appId: "SEU_APP_ID"
-};
+dataInput.addEventListener("change", carregarHorarios);
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+function carregarHorarios() {
+const data = dataInput.value;
+horaSelect.innerHTML = "<option>Carregando...</option>";
 
-window.carregarAgendamentos = async function() {
+db.ref("agendamentos").once("value", snapshot => {
 
-  const data = document.getElementById("dataBusca").value;
-  const lista = document.getElementById("lista");
+let ocupados = [];
 
-  if (!data) return;
+snapshot.forEach(item => {
+const ag = item.val();
+if(ag.data === data){
+ocupados.push(ag.hora);
+}
+});
 
-  lista.innerHTML = "Carregando...";
+horaSelect.innerHTML = "";
 
-  const q = query(
-    collection(db, "agendamentos"),
-    where("data", "==", data)
-  );
+horasPadrao.forEach(h => {
+if(!ocupados.includes(h)){
+let op = document.createElement("option");
+op.value = h;
+op.text = h;
+horaSelect.appendChild(op);
+}
+});
 
-  const snapshot = await getDocs(q);
-
-  lista.innerHTML = "";
-
-  snapshot.forEach(docSnap => {
-    const ag = docSnap.data();
-
-    const div = document.createElement("div");
-    div.className = "item";
-    div.innerHTML = `
-      <b>${ag.hora}</b> - ${ag.nome} (${ag.servico})
-      <br>
-      <button onclick="excluir('${docSnap.id}')">Excluir</button>
-    `;
-    lista.appendChild(div);
-  });
-
-  if (lista.innerHTML === "") {
-    lista.innerHTML = "Nenhum agendamento";
-  }
+if(horaSelect.innerHTML === ""){
+horaSelect.innerHTML = "<option>Sem horários disponíveis</option>";
 }
 
-window.excluir = async function(id) {
-  await deleteDoc(doc(db, "agendamentos", id));
-  alert("Agendamento removido");
+});
 }
 
-window.bloquearHorario = async function() {
+function agendar() {
+const nome = document.getElementById("nome").value.trim();
+const servico = document.getElementById("servico").value;
+const data = dataInput.value;
+const hora = horaSelect.value;
 
-  const data = document.getElementById("dataBloq").value;
-  const hora = document.getElementById("horaBloq").value;
-
-  if (!data || !hora) return;
-
-  await addDoc(collection(db, "bloqueios"), {
-    data,
-    hora,
-    duracao: 600 // bloqueia 10 horas (dia todo para esse horário)
-  });
-
-  document.getElementById("msg").innerText = "Horário bloqueado!";
+if(!nome || !servico || !data || !hora || hora.includes("Sem")){
+alert("Preencha todos os campos");
+return;
 }
 
-window.bloquearDia = async function() {
+const id = data + "_" + hora;
 
-  const data = document.getElementById("dataDia").value;
+db.ref("agendamentos/" + id).once("value", snap => {
 
-  if (!data) return;
-
-  await addDoc(collection(db, "bloqueios"), {
-    data,
-    hora: "09:00",
-    duracao: 600
-  });
-
-  document.getElementById("msg").innerText = "Dia bloqueado!";
+if(snap.exists()){
+alert("Horário já ocupado");
+carregarHorarios();
+return;
 }
 
+db.ref("agendamentos/" + id).set({
+nome,
+servico,
+data,
+hora,
+criadoEm: Date.now()
+});
+
+alert("Agendamento confirmado!");
+
+const numero = "5516997369740";
+const msg = `Olá, agendei ${servico} para o dia ${data} às ${hora}. Nome: ${nome}`;
+
+window.open(`https://wa.me/${numero}?text=${encodeURIComponent(msg)}`);
+
+document.getElementById("nome").value = "";
+
+});
+}
 </script>
 
 </body>
