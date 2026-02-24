@@ -1,58 +1,222 @@
 <!DOCTYPE html>
-
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <title>José Barbearia</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>José Barbearia</title>
 
-  <!-- Estilo do projeto -->
-
-  <link rel="stylesheet" href="style.css">
-
-  <!-- Firebase (padrão do projeto) -->
-
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-
+<style>
+body{
+  font-family: Arial;
+  background:#111;
+  color:white;
+  text-align:center;
+  margin:0;
+  padding:20px;
+}
+h1{color:#00ff88;}
+input,button{
+  padding:10px;
+  margin:5px;
+  border-radius:8px;
+  border:none;
+}
+button{
+  background:#00ff88;
+  font-weight:bold;
+  cursor:pointer;
+}
+.horario{
+  display:inline-block;
+  padding:8px;
+  margin:4px;
+  background:#222;
+  border-radius:6px;
+  cursor:pointer;
+}
+.horario.ocupado{
+  background:#550000;
+  text-decoration:line-through;
+  cursor:not-allowed;
+}
+.admin{
+  margin-top:40px;
+  padding:15px;
+  background:#222;
+  border-radius:10px;
+}
+</style>
 </head>
-
 <body>
 
-<div class="container">
+<h1>José Barbearia</h1>
 
-  <h1>José Barbearia</h1>
-  <p>Agende seu horário de forma rápida e fácil</p>
+<input type="text" id="nome" placeholder="Seu nome">
+<br>
+<input type="date" id="data">
+<div id="horarios"></div>
+<br>
+<button onclick="agendar()">Confirmar Agendamento</button>
+<p id="status"></p>
 
-  <h2>Serviços</h2>
+<hr>
 
-  <div class="card">
-    <p>Corte — <strong>R$ 30</strong></p>
-    <p>Barba — <strong>R$ 20</strong></p>
-    <p>Corte + Barba — <strong>R$ 45</strong></p>
-    <p>Corte Infantil — <strong>R$ 25</strong></p>
-  </div>
-
-  <br>
-
-  <button onclick="window.location.href='agendar.html'">
-    Agendar Horário
-  </button>
-
-<br><br>
-
-  <a class="whatsapp" href="https://wa.me/5516997369740" target="_blank">
-    Falar no WhatsApp
-  </a>
-
-<br><br>
-
-  <!-- Acesso admin (opcional) -->
-
-<a href="admin.html">Área do Administrador</a>
-
+<div class="admin">
+<h3>Área Administrativa</h3>
+<input type="date" id="adminData">
+<button onclick="carregarAdmin()">Ver Agendamentos</button>
+<button onclick="bloquearDia()">Bloquear Dia Inteiro</button>
+<div id="listaAdmin"></div>
 </div>
 
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getDatabase, ref, push, onValue, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "COLE_AQUI",
+  authDomain: "COLE_AQUI",
+  databaseURL: "COLE_AQUI",
+  projectId: "COLE_AQUI",
+  storageBucket: "COLE_AQUI",
+  messagingSenderId: "COLE_AQUI",
+  appId: "COLE_AQUI"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+const horariosDiv = document.getElementById("horarios");
+const dataInput = document.getElementById("data");
+let horarioSelecionado = null;
+
+function gerarHorarios(){
+  horariosDiv.innerHTML="";
+  for(let h=8; h<=19; h++){
+    for(let m=0; m<60; m+=10){
+      const hora = String(h).padStart(2,"0");
+      const min = String(m).padStart(2,"0");
+      const horario = `${hora}:${min}`;
+
+      const div = document.createElement("div");
+      div.className="horario";
+      div.innerText=horario;
+
+      div.onclick=()=>{
+        if(div.classList.contains("ocupado")) return;
+        document.querySelectorAll(".horario").forEach(h=>h.style.background="#222");
+        div.style.background="#00ff88";
+        horarioSelecionado=horario;
+      };
+
+      horariosDiv.appendChild(div);
+    }
+  }
+}
+
+dataInput.addEventListener("change", carregarHorarios);
+
+function carregarHorarios(){
+  gerarHorarios();
+  const data = dataInput.value;
+  if(!data) return;
+
+  const refData = ref(db,"agendamentos/"+data);
+  onValue(refData,(snapshot)=>{
+    const dados = snapshot.val();
+    if(!dados) return;
+
+    document.querySelectorAll(".horario").forEach(div=>{
+      const hora = div.innerText;
+      for(let key in dados){
+        if(dados[key].horario===hora){
+          div.classList.add("ocupado");
+        }
+      }
+    });
+  });
+}
+
+window.agendar=function(){
+  const nome=document.getElementById("nome").value;
+  const data=dataInput.value;
+  const status=document.getElementById("status");
+
+  if(!nome||!data||!horarioSelecionado){
+    status.innerText="Preencha tudo";
+    return;
+  }
+
+  const codigo=Math.random().toString(36).substring(2,10).toUpperCase();
+
+  const agendamento={
+    nome,
+    horario:horarioSelecionado,
+    codigo,
+    servico:"CORTE",
+    profissional:"JOSE GILMARIO"
+  };
+
+  push(ref(db,"agendamentos/"+data),agendamento)
+  .then(()=>{
+
+    const dataFormatada=new Date(data).toLocaleDateString("pt-BR",{
+      weekday:'long',
+      day:'numeric',
+      month:'long',
+      year:'numeric'
+    });
+
+const mensagem=`Olá, ${nome} o seu agendamento com a *José Barbearia* foi confirmado!
+
+*Serviço:* CORTE
+*Quando:* ${dataFormatada} às ${horarioSelecionado}
+*Profissional:* JOSE GILMARIO
+*Código:* ${codigo}
+
+📍Endereço: Av. Otávio Rangel, 477 - Vila Cecap, Guariba - SP
+
+📍Link Google Maps:
+https://maps.app.goo.gl/JVahTmuAYLfAiyx57
+
+Para mais informações ou cancelar:
+https://nextgoagenda.com/josebarbearia/bookings/${codigo}`;
+
+    window.open(`https://wa.me/5516997369740?text=${encodeURIComponent(mensagem)}`,"_blank");
+
+    status.innerText="Agendamento confirmado!";
+    horarioSelecionado=null;
+    carregarHorarios();
+  });
+}
+
+window.carregarAdmin=function(){
+  const data=document.getElementById("adminData").value;
+  const lista=document.getElementById("listaAdmin");
+  lista.innerHTML="";
+
+  onValue(ref(db,"agendamentos/"+data),(snapshot)=>{
+    const dados=snapshot.val();
+    if(!dados){
+      lista.innerHTML="Sem agendamentos";
+      return;
+    }
+    for(let key in dados){
+      lista.innerHTML+=`<p>${dados[key].horario} - ${dados[key].nome}</p>`;
+    }
+  });
+}
+
+window.bloquearDia=function(){
+  const data=document.getElementById("adminData").value;
+  if(!data) return;
+  set(ref(db,"agendamentos/"+data+"/bloqueado"),true);
+  alert("Dia bloqueado!");
+}
+
+gerarHorarios();
+
+</script>
 </body>
 </html>
