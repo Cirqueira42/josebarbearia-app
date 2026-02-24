@@ -1,32 +1,58 @@
 <!DOCTYPE html>
+
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
   <title>José Barbearia</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Estilo do projeto -->
+
   <link rel="stylesheet" href="style.css">
+
+  <!-- Firebase (padrão do projeto) -->
+
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
 </head>
+
 <body>
+
+<div class="container">
 
   <h1>José Barbearia</h1>
   <p>Agende seu horário de forma rápida e fácil</p>
 
   <h2>Serviços</h2>
-  <ul>
-    <li>Corte — R$ 30</li>
-    <li>Barba — R$ 20</li>
-    <li>Corte + Barba — R$ 45</li>
-    <li>Corte Infantil — R$ 25</li>
-  </ul>
+
+  <div class="card">
+    <p>Corte — <strong>R$ 30</strong></p>
+    <p>Barba — <strong>R$ 20</strong></p>
+    <p>Corte + Barba — <strong>R$ 45</strong></p>
+    <p>Corte Infantil — <strong>R$ 25</strong></p>
+  </div>
+
+  <br>
 
   <button onclick="window.location.href='agendar.html'">
     Agendar Horário
   </button>
 
-  <br><br>
+<br><br>
 
-  <a href="https://wa.me/5516997369740" target="_blank">
+  <a class="whatsapp" href="https://wa.me/5516997369740" target="_blank">
     Falar no WhatsApp
   </a>
+
+<br><br>
+
+  <!-- Acesso admin (opcional) -->
+
+<a href="admin.html">Área do Administrador</a>
+
+</div>
 
 </body>
 </html>
