@@ -1,31 +1,47 @@
 <!DOCTYPE html>
+
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Painel Admin</title>
+  <title>Painel Admin - José Barbearia</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
   <h1>Painel da Barbearia</h1>
+  <h2>Agendamentos</h2>
 
-  <ul id="lista"></ul>
+  <ul id="listaAgendamentos"></ul>
+
+  <!-- Firebase -->
 
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
   <script src="firebase-config.js"></script>
 
   <script>
-    const lista = document.getElementById("lista");
+    const lista = document.getElementById("listaAgendamentos");
 
     db.collection("agendamentos")
       .orderBy("criadoEm", "desc")
       .onSnapshot(snapshot => {
         lista.innerHTML = "";
+
         snapshot.forEach(doc => {
-          const a = doc.data();
+          const ag = doc.data();
+
           const li = document.createElement("li");
-          li.textContent = `${a.nome} | ${a.servico} | ${a.data} ${a.hora}`;
+          li.textContent =
+            ag.nome +
+            " | " +
+            ag.servico +
+            " | " +
+            ag.data +
+            " às " +
+            ag.hora;
+
           lista.appendChild(li);
         });
       });
