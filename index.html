@@ -1,5 +1,5 @@
-```html
 <!DOCTYPE html>
+
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -8,200 +8,219 @@
 
 <style>
 body{
-background:#0b0b0b;
-color:#fff;
-font-family:Arial;
 margin:0;
-}
-
-.topo{
+font-family:Arial;
+background:#0d0d0d;
+color:#fff;
 text-align:center;
-padding:20px;
-border-bottom:2px solid #00c853;
 }
-
 .container{
 max-width:420px;
 margin:auto;
-padding:15px;
+padding:20px;
 }
-
-.card{
-background:#141414;
-padding:18px;
-border-radius:14px;
-margin-bottom:18px;
-}
-
-input, select, button{
+h1{color:#00e676;}
+input,select,button{
 width:100%;
 padding:14px;
-margin-top:10px;
+margin-top:8px;
 border-radius:10px;
 border:none;
 font-size:16px;
 }
-
-input, select{
-background:#1f1f1f;
-color:#fff;
-}
-
 button{
 background:#00c853;
 color:#fff;
 font-weight:bold;
 }
-
 .horarios{
 display:grid;
 grid-template-columns:repeat(3,1fr);
-gap:8px;
+gap:6px;
 margin-top:10px;
 }
-
-.hora{
+.horarios button{
 background:#1f1f1f;
-padding:10px;
-border-radius:8px;
-text-align:center;
-cursor:pointer;
 }
-
-.hora.sel{
-background:#00c853;
+.admin{
+background:#1a1a1a;
+padding:15px;
+margin-top:20px;
+border-radius:10px;
 }
 </style>
+
 </head>
 <body>
 
-<div class="topo">
-<h2>José Barbearia</h2>
-<div>09:00 às 19:00</div>
-</div>
-
 <div class="container">
-
-<div class="card">
-<h3>Agende seu horário</h3>
+<h1>José Barbearia</h1>
+<p>Barbeiro: José Gilmario</p>
 
 <input id="nome" placeholder="Seu nome">
-
-<input type="date" id="data">
+<input id="telefone" placeholder="Telefone">
 
 <select id="servico">
-<option value="">Escolha o serviço</option>
 <option value="45">Corte - 45min</option>
 <option value="30">Barba - 30min</option>
 <option value="60">Corte + Barba - 60min</option>
 <option value="40">Infantil - 40min</option>
 </select>
 
+<input type="date" id="data">
+
+<h3>Horários</h3>
 <div class="horarios" id="listaHorarios"></div>
 
-<button onclick="confirmar()">Confirmar Agendamento</button>
+<button onclick="agendar()">Confirmar Agendamento</button>
 
 <div id="status"></div>
 
+<div id="admin" style="display:none" class="admin">
+<h3>Área Administrativa</h3>
+<input type="date" id="adminData">
+<button onclick="verAgendamentos()">Ver Agendamentos</button>
+<button onclick="bloquearDia()">Bloquear Dia</button>
+<div id="listaAdmin"></div>
 </div>
 
 </div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
 <script>
-let horarioSelecionado = null;
 
-// gerar horários 10 em 10
+// ===== COLE SUA CONFIG DO FIREBASE AQUI =====
+const firebaseConfig = {
+apiKey: "SUA_API_KEY",
+authDomain: "SEU_PROJETO.firebaseapp.com",
+databaseURL: "https://SEU_PROJETO-default-rtdb.firebaseio.com",
+projectId: "SEU_PROJETO",
+storageBucket: "SEU_PROJETO.appspot.com",
+messagingSenderId: "XXXX",
+appId: "XXXX"
+};
+// ============================================
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+const numeroWhats = "5516997369740";
+let horarioSelecionado=null;
+
+document.getElementById("data").addEventListener("change",gerarHorarios);
+
 function gerarHorarios(){
-const lista = document.getElementById("listaHorarios");
+let lista=document.getElementById("listaHorarios");
 lista.innerHTML="";
-
-const data = document.getElementById("data").value;
+let data=document.getElementById("data").value;
 if(!data) return;
 
-const agora = new Date();
-const hoje = agora.toISOString().split("T")[0];
+let agora=new Date();
 
-for(let h=9; h<19; h++){
-for(let m=0; m<60; m+=10){
+for(let h=9;h<19;h++){
+for(let m=0;m<60;m+=10){
 
-const hora = (h<10?"0":"")+h+":"+(m<10?"0":"")+m;
+let hora=String(h).padStart(2,"0")+":"+String(m).padStart(2,"0");
+let btn=document.createElement("button");
+btn.innerText=hora;
 
-// bloquear horários passados
-if(data === hoje){
-const horaAtual = agora.getHours()*60 + agora.getMinutes();
-const horaItem = h*60 + m;
-if(horaItem <= horaAtual) continue;
+let dataHora=new Date(data+"T"+hora);
+
+if(dataHora<agora){
+btn.disabled=true;
+btn.style.opacity=0.3;
 }
 
-const div = document.createElement("div");
-div.className="hora";
-div.textContent=hora;
+db.ref("agendamentos/"+data+"/"+hora).once("value",snap=>{
+if(snap.exists()){
+btn.disabled=true;
+btn.style.opacity=0.3;
+}
+});
 
-div.onclick=()=>{
-document.querySelectorAll(".hora").forEach(el=>el.classList.remove("sel"));
-div.classList.add("sel");
-horarioSelecionado = hora;
+btn.onclick=()=>{
+horarioSelecionado=hora;
 };
 
-lista.appendChild(div);
+lista.appendChild(btn);
 }
 }
 }
 
-document.getElementById("data").addEventListener("change", gerarHorarios);
+function agendar(){
+let nome=document.getElementById("nome").value;
+let telefone=document.getElementById("telefone").value;
+let servico=parseInt(document.getElementById("servico").value);
+let data=document.getElementById("data").value;
 
-// confirmar
-function confirmar(){
-
-const nome = document.getElementById("nome").value;
-const data = document.getElementById("data").value;
-const servico = document.getElementById("servico");
-const tempo = servico.value;
-const textoServico = servico.options[servico.selectedIndex].text;
-const status = document.getElementById("status");
-
-if(!nome || !data || !tempo || !horarioSelecionado){
-status.textContent="Preencha tudo";
+if(!nome||!telefone||!data||!horarioSelecionado){
+alert("Preencha tudo");
 return;
 }
 
-// código
-const codigo = Math.random().toString(36).substring(2,8).toUpperCase();
+let inicio=new Date(data+"T"+horarioSelecionado);
 
-// formatar data
-const dataFormatada = new Date(data).toLocaleDateString("pt-BR",{
-weekday:'long',
-day:'numeric',
-month:'long',
-year:'numeric'
+for(let i=0;i<servico;i+=10){
+let slot=new Date(inicio.getTime()+i*60000);
+let hora=slot.toTimeString().slice(0,5);
+
+db.ref("agendamentos/"+data+"/"+hora).set({
+nome:nome,
+telefone:telefone
 });
+}
 
-// mensagem
-const mensagem =
-`Olá, ${nome} seu agendamento foi confirmado!
+let codigo=Math.random().toString(36).substring(2,8).toUpperCase();
 
-Barbearia: José Barbearia
-Serviço: ${textoServico}
-Quando: ${dataFormatada} às ${horarioSelecionado}
+let mensagem=`Olá, ${nome}!
+Seu agendamento foi confirmado.
+
+Serviço: ${servico} minutos
+Data: ${data}
+Hora: ${horarioSelecionado}
 Profissional: José Gilmario
 Código: ${codigo}
 
-Endereço:
-Av. Otávio Rangel, 477 - Guariba
+Para cancelar:
+${location.href}?cancelar=${data}_${horarioSelecionado}`;
 
-Cancelar agendamento:
-https://ueira42.github.io/cancelar.html?c=${codigo}`;
+window.open(`https://wa.me/${numeroWhats}?text=${encodeURIComponent(mensagem)}`);
 
-// seu WhatsApp
-const telefone = "5516997369740";
-const url = `https://wa.me/${telefone}?text=${encodeURIComponent(mensagem)}`;
-
-window.open(url, "_blank");
-
-status.textContent="Abrindo WhatsApp...";
+document.getElementById("status").innerHTML="Agendamento confirmado!";
+gerarHorarios();
 }
+
+// ===== ADMIN =====
+if(location.search.includes("admin=1020")){
+document.getElementById("admin").style.display="block";
+}
+
+function verAgendamentos(){
+let data=document.getElementById("adminData").value;
+db.ref("agendamentos/"+data).once("value",snap=>{
+let html="";
+snap.forEach(s=>{
+html+=s.key+" - "+s.val().nome+"<br>";
+});
+document.getElementById("listaAdmin").innerHTML=html;
+});
+}
+
+function bloquearDia(){
+let data=document.getElementById("adminData").value;
+for(let h=9;h<19;h++){
+for(let m=0;m<60;m+=10){
+let hora=String(h).padStart(2,"0")+":"+String(m).padStart(2,"0");
+db.ref("agendamentos/"+data+"/"+hora).set({bloqueado:true});
+}
+}
+alert("Dia bloqueado");
+}
+
 </script>
 
 </body>
 </html>
-```
