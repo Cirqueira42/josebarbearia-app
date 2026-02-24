@@ -1,8 +1,8 @@
 function salvarAgendamento(nome, servico, data, hora) {
 
   const ref = db.collection("agendamentos")
-    .where("data", "==", data)
-    .where("hora", "==", hora);
+                .where("data", "==", data)
+                .where("hora", "==", hora);
 
   ref.get().then(snapshot => {
 
@@ -12,19 +12,20 @@ function salvarAgendamento(nome, servico, data, hora) {
     }
 
     db.collection("agendamentos").add({
-      nome,
-      servico,
-      data,
-      hora,
+      nome: nome,
+      servico: servico,
+      data: data,
+      hora: hora,
       criadoEm: new Date()
     })
     .then(() => {
-      alert("Agendamento confirmado!");
+      alert("Agendamento realizado com sucesso!");
       window.location.href = "index.html";
     })
-    .catch(err => {
-      alert("Erro: " + err);
+    .catch(error => {
+      alert("Erro ao agendar: " + error);
     });
 
   });
+
 }
