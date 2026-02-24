@@ -8,45 +8,62 @@
 
 <style>
 body{
-margin:0;
-font-family:Arial;
-background:#0d0d0d;
+background:#0b0b0b;
 color:#fff;
-text-align:center;
+font-family:Arial;
+margin:0;
 }
+
 .container{
 max-width:420px;
 margin:auto;
 padding:20px;
 }
-h1{color:#00e676;}
-input,select,button{
+
+h1{
+color:#00c853;
+text-align:center;
+}
+
+input,select{
 width:100%;
 padding:14px;
-margin-top:8px;
+margin-top:10px;
 border-radius:10px;
 border:none;
 font-size:16px;
 }
-button{
-background:#00c853;
-color:#fff;
-font-weight:bold;
-}
+
 .horarios{
 display:grid;
 grid-template-columns:repeat(3,1fr);
-gap:6px;
-margin-top:10px;
-}
-.horarios button{
-background:#1f1f1f;
-}
-.admin{
-background:#1a1a1a;
-padding:15px;
+gap:10px;
 margin-top:20px;
+}
+
+.horarios button{
+padding:14px;
+border:none;
 border-radius:10px;
+background:#1f1f1f;
+color:#fff;
+font-size:16px;
+}
+
+.confirmar{
+width:100%;
+margin-top:20px;
+padding:16px;
+background:#00c853;
+border:none;
+border-radius:12px;
+font-size:18px;
+color:#fff;
+}
+
+#status{
+margin-top:10px;
+text-align:center;
 }
 </style>
 
@@ -55,7 +72,6 @@ border-radius:10px;
 
 <div class="container">
 <h1>José Barbearia</h1>
-<p>Barbeiro: José Gilmario</p>
 
 <input id="nome" placeholder="Seu nome">
 <input id="telefone" placeholder="Telefone">
@@ -70,29 +86,21 @@ border-radius:10px;
 <input type="date" id="data">
 
 <h3>Horários</h3>
-<div class="horarios" id="listaHorarios"></div>
+<div class="horarios" id="horarios"></div>
 
-<button onclick="agendar()">Confirmar Agendamento</button>
+<button class="confirmar" onclick="agendar()">Confirmar Agendamento</button>
 
 <div id="status"></div>
-
-<div id="admin" style="display:none" class="admin">
-<h3>Área Administrativa</h3>
-<input type="date" id="adminData">
-<button onclick="verAgendamentos()">Ver Agendamentos</button>
-<button onclick="bloquearDia()">Bloquear Dia</button>
-<div id="listaAdmin"></div>
 </div>
 
-</div>
+<!-- Firebase -->
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
 <script>
-
-// ===== COLE SUA CONFIG DO FIREBASE AQUI =====
+// COLE SEU FIREBASE AQUI
 const firebaseConfig = {
 apiKey: "SUA_API_KEY",
 authDomain: "SEU_PROJETO.firebaseapp.com",
@@ -102,124 +110,109 @@ storageBucket: "SEU_PROJETO.appspot.com",
 messagingSenderId: "XXXX",
 appId: "XXXX"
 };
-// ============================================
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-const numeroWhats = "5516997369740";
-let horarioSelecionado=null;
+let horarioSelecionado = null;
 
-document.getElementById("data").addEventListener("change",gerarHorarios);
-
+// GERAR HORÁRIOS
 function gerarHorarios(){
-let lista=document.getElementById("listaHorarios");
-lista.innerHTML="";
-let data=document.getElementById("data").value;
-if(!data) return;
+const div = document.getElementById("horarios");
+div.innerHTML="";
 
-let agora=new Date();
+for(let h=9; h<19; h++){
+for(let m=0; m<60; m+=10){
 
-for(let h=9;h<19;h++){
-for(let m=0;m<60;m+=10){
+let hora = (h<10?"0"+h:h)+":"+(m==0?"00":m);
 
-let hora=String(h).padStart(2,"0")+":"+String(m).padStart(2,"0");
-let btn=document.createElement("button");
-btn.innerText=hora;
+let btn = document.createElement("button");
+btn.innerText = hora;
 
-let dataHora=new Date(data+"T"+hora);
-
-if(dataHora<agora){
-btn.disabled=true;
-btn.style.opacity=0.3;
-}
-
-db.ref("agendamentos/"+data+"/"+hora).once("value",snap=>{
-if(snap.exists()){
-btn.disabled=true;
-btn.style.opacity=0.3;
-}
+// BOTÃO SELECIONAR (VERDE)
+btn.onclick = () => {
+document.querySelectorAll(".horarios button").forEach(b=>{
+b.style.background="#1f1f1f";
 });
-
-btn.onclick=()=>{
-horarioSelecionado=hora;
+btn.style.background="#00c853";
+horarioSelecionado = hora;
 };
 
-lista.appendChild(btn);
+div.appendChild(btn);
 }
 }
 }
 
+gerarHorarios();
+
+// AGENDAR
 function agendar(){
-let nome=document.getElementById("nome").value;
-let telefone=document.getElementById("telefone").value;
-let servico=parseInt(document.getElementById("servico").value);
-let data=document.getElementById("data").value;
 
-if(!nome||!telefone||!data||!horarioSelecionado){
-alert("Preencha tudo");
+const nome = document.getElementById("nome").value;
+const telefone = document.getElementById("telefone").value;
+const data = document.getElementById("data").value;
+const duracao = parseInt(document.getElementById("servico").value);
+const status = document.getElementById("status");
+
+if(!nome || !telefone || !data || !horarioSelecionado){
+status.innerText="Preencha tudo";
 return;
 }
 
-let inicio=new Date(data+"T"+horarioSelecionado);
+const codigo = Math.random().toString(36).substring(2,8).toUpperCase();
 
-for(let i=0;i<servico;i+=10){
-let slot=new Date(inicio.getTime()+i*60000);
-let hora=slot.toTimeString().slice(0,5);
+let inicio = new Date(data+"T"+horarioSelecionado);
 
-db.ref("agendamentos/"+data+"/"+hora).set({
-nome:nome,
-telefone:telefone
+// BLOQUEAR CONFORME DURAÇÃO
+for(let i=0;i<duracao;i+=10){
+let slot = new Date(inicio.getTime() + i*60000);
+let hora = slot.toTimeString().slice(0,5);
+firebase.database().ref("agendamentos/"+data+"/"+hora).set({
+nome,
+telefone,
+codigo
 });
 }
 
-let codigo=Math.random().toString(36).substring(2,8).toUpperCase();
+// WHATSAPP
+const msg = `Olá ${nome}, seu horário foi confirmado!
 
-let mensagem=`Olá, ${nome}!
-Seu agendamento foi confirmado.
-
-Serviço: ${servico} minutos
 Data: ${data}
 Hora: ${horarioSelecionado}
-Profissional: José Gilmario
-Código: ${codigo}
 
-Para cancelar:
-${location.href}?cancelar=${data}_${horarioSelecionado}`;
+Cancelar:
+${window.location.origin}${window.location.pathname}?cancelar=${data}_${horarioSelecionado}`;
 
-window.open(`https://wa.me/${numeroWhats}?text=${encodeURIComponent(mensagem)}`);
+window.open("https://wa.me/55"+telefone+"?text="+encodeURIComponent(msg));
 
-document.getElementById("status").innerHTML="Agendamento confirmado!";
+status.innerText="Agendamento confirmado!";
+horarioSelecionado=null;
 gerarHorarios();
 }
 
-// ===== ADMIN =====
-if(location.search.includes("admin=1020")){
-document.getElementById("admin").style.display="block";
+// CANCELAMENTO COM CONFIRMAÇÃO
+window.onload = function(){
+const url = new URL(window.location.href);
+const cancelar = url.searchParams.get("cancelar");
+
+if(cancelar){
+const partes = cancelar.split("_");
+const data = partes[0];
+const hora = partes[1];
+
+if(confirm("Deseja realmente cancelar o agendamento das " + hora + " ?")){
+for(let i=0;i<60;i+=10){
+let slot = new Date(data + "T" + hora);
+slot = new Date(slot.getTime() + i*60000);
+let h = slot.toTimeString().slice(0,5);
+firebase.database().ref("agendamentos/"+data+"/"+h).remove();
 }
 
-function verAgendamentos(){
-let data=document.getElementById("adminData").value;
-db.ref("agendamentos/"+data).once("value",snap=>{
-let html="";
-snap.forEach(s=>{
-html+=s.key+" - "+s.val().nome+"<br>";
-});
-document.getElementById("listaAdmin").innerHTML=html;
-});
-}
-
-function bloquearDia(){
-let data=document.getElementById("adminData").value;
-for(let h=9;h<19;h++){
-for(let m=0;m<60;m+=10){
-let hora=String(h).padStart(2,"0")+":"+String(m).padStart(2,"0");
-db.ref("agendamentos/"+data+"/"+hora).set({bloqueado:true});
+alert("Agendamento cancelado com sucesso!");
+window.location.href = window.location.pathname;
 }
 }
-alert("Dia bloqueado");
 }
-
 </script>
 
 </body>
