@@ -1,288 +1,41 @@
-
-```html
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>José Barbearia - Agendamento</title>
-
-<style>
-body{
-    margin:0;
-    font-family:Arial;
-    background:#0d0d0d;
-    color:#fff;
-}
-.container{
-    max-width:400px;
-    margin:auto;
-    padding:20px;
-}
-h2{
-    text-align:center;
-    color:#c9a227;
-}
-input, select{
-    width:100%;
-    padding:12px;
-    margin-bottom:10px;
-    border-radius:6px;
-    border:1px solid #333;
-    background:#1a1a1a;
-    color:#fff;
-}
-#horarios{
-    display:grid;
-    grid-template-columns:repeat(3,1fr);
-    gap:6px;
-}
-.horario{
-    padding:10px;
-    text-align:center;
-    background:#1a1a1a;
-    border:1px solid #333;
-    border-radius:6px;
-    cursor:pointer;
-}
-.horario:hover{border-color:#c9a227;}
-.selecionado{
-    background:#c9a227;
-    color:#000;
-    font-weight:bold;
-}
-button{
-    width:100%;
-    padding:14px;
-    background:#c9a227;
-    border:none;
-    font-weight:bold;
-    border-radius:6px;
-    cursor:pointer;
-}
-</style>
+  <meta charset="UTF-8">
+  <title>Agendamento</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<div class="container">
-<h2>Agendar Horário</h2>
+  <h1>Agendar Horário</h1>
 
-<input id="nome" placeholder="Seu nome">
-<input id="telefone" placeholder="Telefone">
+  <input type="text" id="nome" placeholder="Seu nome">
+  <input type="date" id="data">
+  <input type="time" id="hora">
 
-<select id="servico">
-<option value="">Serviço</option>
-<option value="50">Corte (50min)</option>
-<option value="30">Barba (30min)</option>
-<option value="60">Corte + Barba (60min)</option>
-<option value="40">Corte Infantil (40min)</option>
-</select>
+  <button onclick="agendar()">Confirmar</button>
 
-<input type="date" id="data" onchange="gerarHorarios()">
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
-<div id="horarios"></div>
+  <script src="firebase-config.js"></script>
+  <script src="app.js"></script>
 
-<input type="hidden" id="hora">
+  <script>
+    function agendar() {
+      const nome = document.getElementById("nome").value;
+      const data = document.getElementById("data").value;
+      const hora = document.getElementById("hora").value;
 
-<button onclick="confirmar()">Confirmar Agendamento</button>
-</div>
-
-<script>
-// ================= CONFIG =================
-const numeroBarbearia = "5516997369740";
-
-// ================= DATA BRASIL =================
-function hojeBrasil(){
-    const agora = new Date();
-    const ano = agora.getFullYear();
-    const mes = ("0"+(agora.getMonth()+1)).slice(-2);
-    const dia = ("0"+agora.getDate()).slice(-2);
-    return `${ano}-${mes}-${dia}`;
-}
-
-function horaAgora(){
-    const agora = new Date();
-    const h = ("0"+agora.getHours()).slice(-2);
-    const m = ("0"+agora.getMinutes()).slice(-2);
-    return `${h}:${m}`;
-}
-
-// ================= HORÁRIO DE FUNCIONAMENTO =================
-function horarioFuncionamento(dia){
-
-    // Domingo
-    if(dia === 0){
-        return null;
-    }
-
-    // Segunda, Quinta, Sexta (até 19h)
-    if(dia === 1 || dia === 4 || dia === 5){
-        return [
-            ["09:00","12:00"],
-            ["13:00","19:00"]
-        ];
-    }
-
-    // Terça e Quarta (até 18h)
-    if(dia === 2 || dia === 3){
-        return [
-            ["09:00","12:00"],
-            ["13:00","18:00"]
-        ];
-    }
-
-    // Sábado
-    if(dia === 6){
-        return [
-            ["08:30","20:00"]
-        ];
-    }
-}
-
-// ================= GERAR HORÁRIOS =================
-function gerarHorarios(){
-    const data = document.getElementById("data").value;
-    const container = document.getElementById("horarios");
-    container.innerHTML="";
-
-    if(!data) return;
-
-    // bloquear datas passadas
-    if(data < hojeBrasil()){
-        container.innerHTML="Data inválida";
+      if (!nome || !data || !hora) {
+        alert("Preencha todos os campos!");
         return;
+      }
+
+      salvarAgendamento(nome, data, hora);
     }
-
-    const partes = data.split("-");
-    const diaSemana = new Date(partes[0], partes[1]-1, partes[2]).getDay();
-    const funcionamento = horarioFuncionamento(diaSemana);
-
-    if(!funcionamento){
-        container.innerHTML="Fechado neste dia";
-        return;
-    }
-
-    const hoje = hojeBrasil();
-    const horaAtual = horaAgora();
-
-    const agenda = JSON.parse(localStorage.getItem("agenda") || "{}");
-    const ocupados = agenda[data] || [];
-
-    funcionamento.forEach(periodo=>{
-        let atual = new Date("2000-01-01 "+periodo[0]);
-        const limite = new Date("2000-01-01 "+periodo[1]);
-
-        while(atual < limite){
-
-            let h = ("0"+atual.getHours()).slice(-2);
-            let m = ("0"+atual.getMinutes()).slice(-2);
-            let horaTexto = `${h}:${m}`;
-
-            // bloquear horários passados se for hoje
-            if(data === hoje && horaTexto <= horaAtual){
-                atual.setMinutes(atual.getMinutes()+10);
-                continue;
-            }
-
-            // bloquear horários já ocupados
-            if(!ocupados.includes(horaTexto)){
-                const div = document.createElement("div");
-                div.className="horario";
-                div.innerText=horaTexto;
-
-                div.onclick=function(){
-                    document.querySelectorAll(".horario")
-                    .forEach(x=>x.classList.remove("selecionado"));
-                    this.classList.add("selecionado");
-                    document.getElementById("hora").value=horaTexto;
-                };
-
-                container.appendChild(div);
-            }
-
-            atual.setMinutes(atual.getMinutes()+10);
-        }
-    });
-}
-
-// ================= CONFIRMAR =================
-function confirmar(){
-    const nome = document.getElementById("nome").value;
-    const telefone = document.getElementById("telefone").value;
-    const servicoSelect = document.getElementById("servico");
-    const duracao = parseInt(servicoSelect.value);
-    const servicoNome = servicoSelect.options[servicoSelect.selectedIndex].text;
-    const data = document.getElementById("data").value;
-    const hora = document.getElementById("hora").value;
-
-    if(!nome || !telefone || !duracao || !data || !hora){
-        alert("Preencha todos os campos");
-        return;
-    }
-
-    // salvar cliente
-    localStorage.setItem("nome",nome);
-    localStorage.setItem("telefone",telefone);
-
-    // gerar código
-    const codigo = Math.random().toString(36).substring(2,10).toUpperCase();
-
-    // salvar agenda
-    const agenda = JSON.parse(localStorage.getItem("agenda") || "{}");
-    if(!agenda[data]) agenda[data]=[];
-
-    let atual = new Date("2000-01-01 "+hora);
-
-    for(let i=0;i<duracao;i+=10){
-        let h=("0"+atual.getHours()).slice(-2);
-        let m=("0"+atual.getMinutes()).slice(-2);
-        agenda[data].push(`${h}:${m}`);
-        atual.setMinutes(atual.getMinutes()+10);
-    }
-
-    localStorage.setItem("agenda",JSON.stringify(agenda));
-
-    // mensagem cliente
-    const msgCliente =
-`Olá, ${nome} o seu agendamento com a *José barbearia* foi confirmado!
-
-*Serviço:* ${servicoNome}
-*Quando:* ${data} às ${hora}
-*Profissional:* JOSE GILMARIO
-*Código:* ${codigo}
-
-📍Endereço:
-Av. Otávio Rangel, 477 - Guariba - SP
-
-📍Mapa:
-https://maps.app.goo.gl/JVahTmuAYLfAiyx57`;
-
-    // mensagem para você
-    const msgBarbearia =
-`NOVO AGENDAMENTO
-
-Cliente: ${nome}
-Telefone: ${telefone}
-Serviço: ${servicoNome}
-Data: ${data}
-Hora: ${hora}
-Código: ${codigo}`;
-
-    window.open(`https://wa.me/55${telefone}?text=${encodeURIComponent(msgCliente)}`, "_blank");
-    window.open(`https://wa.me/${numeroBarbearia}?text=${encodeURIComponent(msgBarbearia)}`, "_blank");
-
-    alert("Agendamento confirmado!");
-    gerarHorarios();
-}
-
-// ================= INICIAR =================
-window.onload=function(){
-    document.getElementById("nome").value = localStorage.getItem("nome") || "";
-    document.getElementById("telefone").value = localStorage.getItem("telefone") || "";
-    document.getElementById("data").min = hojeBrasil();
-};
-</script>
+  </script>
 
 </body>
 </html>
-```
