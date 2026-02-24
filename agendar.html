@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
@@ -7,45 +8,131 @@
 </head>
 <body>
 
-  <h1>Agendar Horário</h1>
+<h1>Agendar Horário</h1>
 
-  <input type="text" id="nome" placeholder="Seu nome">
+<input type="text" id="nome" placeholder="Seu nome">
 
-  <select id="servico">
-    <option value="">Escolha o serviço</option>
-    <option value="Corte - R$30">Corte - R$ 30</option>
-    <option value="Barba - R$20">Barba - R$ 20</option>
-    <option value="Corte + Barba - R$45">Corte + Barba - R$ 45</option>
-    <option value="Corte Infantil - R$25">Corte Infantil - R$ 25</option>
-  </select>
+<select id="servico" onchange="carregarHorarios()">
+  <option value="">Escolha o serviço</option>
+  <option value="Corte" data-tempo="30">Corte - R$ 30 (30 min)</option>
+  <option value="Barba" data-tempo="30">Barba - R$ 20 (30 min)</option>
+  <option value="Corte + Barba" data-tempo="60">Corte + Barba - R$ 45 (60 min)</option>
+  <option value="Corte Infantil" data-tempo="30">Corte Infantil - R$ 25 (30 min)</option>
+</select>
 
-  <input type="date" id="data">
-  <input type="time" id="hora">
+<input type="date" id="data" onchange="carregarHorarios()">
 
-  <button onclick="agendar()">Confirmar Agendamento</button>
+<select id="hora">
+  <option value="">Selecione o horário</option>
+</select>
 
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<button onclick="agendar()">Confirmar</button>
 
-  <script src="firebase-config.js"></script>
-  <script src="app.js"></script>
+<!-- Firebase -->
 
-  <script>
-    function agendar() {
-      const nome = document.getElementById("nome").value;
-      const servico = document.getElementById("servico").value;
-      const data = document.getElementById("data").value;
-      const hora = document.getElementById("hora").value;
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 
-      if (!nome || !servico || !data || !hora) {
-        alert("Preencha todos os campos!");
-        return;
-      }
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
-      salvarAgendamento(nome, servico, data, hora);
+<script src="firebase-config.js"></script>
+
+<script src="app.js"></script>
+
+<script>
+// gera horários de 10 em 10 minutos (09:00 até 18:00)
+function gerarHorarios() {
+  let horarios = [];
+  for (let h = 9; h <= 18; h++) {
+    for (let m = 0; m < 60; m += 10) {
+      let hora = String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0");
+      horarios.push(hora);
     }
-  </script>
+  }
+  return horarios;
+}
+
+function horaParaMinutos(h) {
+  const [hora, min] = h.split(":").map(Number);
+  return hora * 60 + min;
+}
+
+function carregarHorarios() {
+  const data = document.getElementById("data").value;
+  const servicoSelect = document.getElementById("servico");
+  const horaSelect = document.getElementById("hora");
+
+  horaSelect.innerHTML = "<option>Carregando...</option>";
+
+  if (!data || servicoSelect.selectedIndex === 0) {
+    horaSelect.innerHTML = "<option>Selecione serviço e data</option>";
+    return;
+  }
+
+  const duracaoSelecionada = Number(servicoSelect.options[servicoSelect.selectedIndex].dataset.tempo);
+  const todosHorarios = gerarHorarios();
+
+  db.collection("agendamentos")
+    .where("data", "==", data)
+    .get()
+    .then(snapshot => {
+
+      let bloqueados = [];
+
+      snapshot.forEach(doc => {
+        const ag = doc.data();
+        const inicio = horaParaMinutos(ag.hora);
+        const fim = inicio + ag.duracao;
+
+        for (let t = inicio; t < fim; t += 10) {
+          bloqueados.push(t);
+        }
+      });
+
+      horaSelect.innerHTML = "<option value=''>Selecione o horário</option>";
+
+      todosHorarios.forEach(h => {
+        const min = horaParaMinutos(h);
+
+        // verifica se esse horário cabe dentro da duração escolhida
+        let pode = true;
+
+        for (let t = min; t < min + duracaoSelecionada; t += 10) {
+          if (bloqueados.includes(t)) {
+            pode = false;
+            break;
+          }
+        }
+
+        if (pode) {
+          const option = document.createElement("option");
+          option.value = h;
+          option.textContent = h;
+          horaSelect.appendChild(option);
+        }
+      });
+
+      if (horaSelect.options.length === 1) {
+        horaSelect.innerHTML = "<option>Sem horários disponíveis</option>";
+      }
+    });
+}
+
+function agendar() {
+  const nome = document.getElementById("nome").value;
+  const servicoSelect = document.getElementById("servico");
+  const servico = servicoSelect.value;
+  const duracao = Number(servicoSelect.options[servicoSelect.selectedIndex].dataset.tempo);
+  const data = document.getElementById("data").value;
+  const hora = document.getElementById("hora").value;
+
+  if (!nome || !servico || !data || !hora) {
+    alert("Preencha todos os campos!");
+    return;
+  }
+
+  salvarAgendamento(nome, servico, data, hora, duracao);
+}
+</script>
 
 </body>
 </html>
