@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -7,23 +8,16 @@
 
 <style>
 body{
-margin:0;
-font-family:Arial,Helvetica,sans-serif;
 background:#0b0b0b;
 color:#fff;
+font-family:Arial;
+margin:0;
 }
 
 .topo{
-background:#000;
-padding:20px;
 text-align:center;
+padding:20px;
 border-bottom:2px solid #00c853;
-}
-
-.topo h1{
-margin:0;
-color:#00c853;
-font-size:24px;
 }
 
 .container{
@@ -37,15 +31,9 @@ background:#141414;
 padding:18px;
 border-radius:14px;
 margin-bottom:18px;
-box-shadow:0 4px 15px rgba(0,0,0,0.6);
 }
 
-h2{
-margin-top:0;
-font-size:20px;
-}
-
-input,button{
+input, select, button{
 width:100%;
 padding:14px;
 margin-top:10px;
@@ -54,7 +42,7 @@ border:none;
 font-size:16px;
 }
 
-input{
+input, select{
 background:#1f1f1f;
 color:#fff;
 }
@@ -65,236 +53,155 @@ color:#fff;
 font-weight:bold;
 }
 
-.servicos{
+.horarios{
 display:grid;
-grid-template-columns:1fr 1fr;
+grid-template-columns:repeat(3,1fr);
 gap:8px;
 margin-top:10px;
 }
 
-.servico{
+.hora{
 background:#1f1f1f;
 padding:10px;
-text-align:center;
 border-radius:8px;
-cursor:pointer;
-font-size:14px;
-}
-
-.servico.sel{
-background:#00c853;
-}
-
-.horarios{
-display:flex;
-flex-wrap:wrap;
-gap:6px;
-margin-top:12px;
-}
-
-.hora{
-width:30%;
-background:#1f1f1f;
-padding:8px;
 text-align:center;
-border-radius:6px;
 cursor:pointer;
 }
 
 .hora.sel{
 background:#00c853;
 }
-
-.hora.ocupado{
-background:#700;
-pointer-events:none;
-}
-
-.admin{
-display:none;
-}
-
-.footer{
-text-align:center;
-font-size:12px;
-opacity:.6;
-margin-top:20px;
-}
 </style>
 </head>
 <body>
 
 <div class="topo">
-<h1>José Barbearia</h1>
+<h2>José Barbearia</h2>
 <div>09:00 às 19:00</div>
 </div>
 
 <div class="container">
 
 <div class="card">
-<h2>Agende seu horário</h2>
+<h3>Agende seu horário</h3>
 
 <input id="nome" placeholder="Seu nome">
 
 <input type="date" id="data">
 
-<div class="servicos">
-<div class="servico" onclick="selServico(this,45,30)">Corte<br>45min</div>
-<div class="servico" onclick="selServico(this,30,20)">Barba<br>30min</div>
-<div class="servico" onclick="selServico(this,60,45)">Cabelo+Barba<br>60min</div>
-<div class="servico" onclick="selServico(this,40,25)">Infantil<br>40min</div>
-</div>
+<select id="servico">
+<option value="">Escolha o serviço</option>
+<option value="45">Corte - 45min</option>
+<option value="30">Barba - 30min</option>
+<option value="60">Corte + Barba - 60min</option>
+<option value="40">Infantil - 40min</option>
+</select>
 
-<div class="horarios" id="horarios"></div>
+<div class="horarios" id="listaHorarios"></div>
 
-<button onclick="agendar()">Confirmar Agendamento</button>
+<button onclick="confirmar()">Confirmar Agendamento</button>
 
 <div id="status"></div>
-</div>
 
-<div class="card admin" id="admin">
-<h2>Área Administrativa</h2>
-
-<input type="date" id="adminData">
-<button onclick="verAgenda()">Ver Agenda</button>
-<button onclick="bloquearDia()">Bloquear Dia</button>
-
-<div id="listaAdmin"></div>
-</div>
-
-<div class="footer">
-Sistema profissional de agendamento
 </div>
 
 </div>
 
-<script type="module">
+<script>
+let horarioSelecionado = null;
 
-// MOSTRAR ADMIN COM SENHA
-const url=new URLSearchParams(location.search);
-if(url.get("admin")==="1020"){
-document.getElementById("admin").style.display="block";
-}
-
-// FIREBASE (COLE SUA CONFIG)
-import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import{getDatabase,ref,push,onValue,set}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-
-const firebaseConfig={
-apiKey:"COLE",
-authDomain:"COLE",
-databaseURL:"COLE",
-projectId:"COLE",
-storageBucket:"COLE",
-messagingSenderId:"COLE",
-appId:"COLE"
-};
-
-const app=initializeApp(firebaseConfig);
-const db=getDatabase(app);
-
-// SERVIÇO
-let duracao=0;
-let valor=0;
-
-window.selServico=function(el,dur,val){
-document.querySelectorAll(".servico").forEach(s=>s.classList.remove("sel"));
-el.classList.add("sel");
-duracao=dur;
-valor=val;
-}
-
-// GERAR HORÁRIOS 10min
-const lista=document.getElementById("horarios");
-let horaSel=null;
-
+// gerar horários 10 em 10
 function gerarHorarios(){
+const lista = document.getElementById("listaHorarios");
 lista.innerHTML="";
-for(let h=9;h<19;h++){
-for(let m=0;m<60;m+=10){
-let hora=`${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`;
-let div=document.createElement("div");
+
+const data = document.getElementById("data").value;
+if(!data) return;
+
+const agora = new Date();
+const hoje = agora.toISOString().split("T")[0];
+
+for(let h=9; h<19; h++){
+for(let m=0; m<60; m+=10){
+
+const hora = (h<10?"0":"")+h+":"+(m<10?"0":"")+m;
+
+// bloquear horários passados
+if(data === hoje){
+const horaAtual = agora.getHours()*60 + agora.getMinutes();
+const horaItem = h*60 + m;
+if(horaItem <= horaAtual) continue;
+}
+
+const div = document.createElement("div");
 div.className="hora";
 div.textContent=hora;
+
 div.onclick=()=>{
-document.querySelectorAll(".hora").forEach(e=>e.classList.remove("sel"));
+document.querySelectorAll(".hora").forEach(el=>el.classList.remove("sel"));
 div.classList.add("sel");
-horaSel=hora;
+horarioSelecionado = hora;
 };
+
 lista.appendChild(div);
-}}
+}
+}
 }
 
-gerarHorarios();
+document.getElementById("data").addEventListener("change", gerarHorarios);
 
-// AGENDAR
-window.agendar=function(){
-const nome=document.getElementById("nome").value;
-const data=document.getElementById("data").value;
+// confirmar
+function confirmar(){
 
-if(!nome||!data||!horaSel||!duracao){
-alert("Preencha tudo");
+const nome = document.getElementById("nome").value;
+const data = document.getElementById("data").value;
+const servico = document.getElementById("servico");
+const tempo = servico.value;
+const textoServico = servico.options[servico.selectedIndex].text;
+const status = document.getElementById("status");
+
+if(!nome || !data || !tempo || !horarioSelecionado){
+status.textContent="Preencha tudo";
 return;
 }
 
-const codigo=Math.random().toString(36).substring(2,8).toUpperCase();
+// código
+const codigo = Math.random().toString(36).substring(2,8).toUpperCase();
 
-push(ref(db,"agendamentos/"+data),{
-nome,
-horario:horaSel,
-duracao,
-valor,
-codigo
-}).then(()=>{
+// formatar data
+const dataFormatada = new Date(data).toLocaleDateString("pt-BR",{
+weekday:'long',
+day:'numeric',
+month:'long',
+year:'numeric'
+});
 
-const msg=`Olá ${nome}, seu agendamento foi confirmado!
+// mensagem
+const mensagem =
+`Olá, ${nome} seu agendamento foi confirmado!
 
-Data: ${data}
-Hora: ${horaSel}
+Barbearia: José Barbearia
+Serviço: ${textoServico}
+Quando: ${dataFormatada} às ${horarioSelecionado}
 Profissional: José Gilmario
 Código: ${codigo}
 
-Cancelar:
-${location.origin}${location.pathname}?cancelar=${codigo}&data=${data}`;
+Endereço:
+Av. Otávio Rangel, 477 - Guariba
 
-window.open("https://wa.me/5516997369740?text="+encodeURIComponent(msg));
+Cancelar agendamento:
+https://ueira42.github.io/cancelar.html?c=${codigo}`;
 
-alert("Agendado com sucesso");
-});
-};
+// seu WhatsApp
+const telefone = "5516997369740";
+const url = `https://wa.me/${telefone}?text=${encodeURIComponent(mensagem)}`;
 
-// ADMIN
-window.verAgenda=function(){
-const data=document.getElementById("adminData").value;
-const lista=document.getElementById("listaAdmin");
+window.open(url, "_blank");
 
-onValue(ref(db,"agendamentos/"+data),(snap)=>{
-const dados=snap.val();
-lista.innerHTML="";
-let total=0;
-
-for(let k in dados){
-total+=dados[k].valor;
-lista.innerHTML+=`
-<div style="background:#1f1f1f;padding:8px;margin:6px;border-radius:6px">
-${dados[k].horario} - ${dados[k].nome} (R$${dados[k].valor})
-<button onclick="cancelarAdmin('${data}','${k}')">Cancelar</button>
-</div>`;
+status.textContent="Abrindo WhatsApp...";
 }
-
-lista.innerHTML+="<b>Total: R$"+total+"</b>";
-});
-}
-
-window.cancelarAdmin=function(data,k){
-set(ref(db,"agendamentos/"+data+"/"+k),null);
-}
-
-window.bloquearDia=function(){
-const data=document.getElementById("adminData").value;
-set(ref(db,"agendamentos/"+data),{bloqueado:true});
-}
-
 </script>
+
 </body>
 </html>
+```
