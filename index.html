@@ -6,16 +6,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Jose Barbearia</title>
 
+<!-- Google Font -->
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+
 <style>
 * {
 margin: 0;
 padding: 0;
 box-sizing: border-box;
-font-family: Arial, sans-serif;
+font-family: 'Poppins', sans-serif;
 }
 
 body {
-background: #0e0e0e;
+background: linear-gradient(180deg, #0d0d0d, #000);
 color: #fff;
 display: flex;
 justify-content: center;
@@ -23,60 +27,67 @@ align-items: center;
 min-height: 100vh;
 }
 
-.container {
-width: 95%;
+.card {
+width: 92%;
 max-width: 420px;
-background: #1c1c1c;
-padding: 25px;
-border-radius: 12px;
-box-shadow: 0 0 20px rgba(0,0,0,0.6);
+background: #1a1a1a;
+border-radius: 18px;
+padding: 28px;
+box-shadow: 0 10px 30px rgba(0,0,0,0.7);
 }
 
 h1 {
 text-align: center;
-margin-bottom: 20px;
 font-size: 26px;
+margin-bottom: 25px;
+font-weight: 600;
 }
 
 label {
-font-size: 14px;
-margin-top: 12px;
 display: block;
+margin-top: 14px;
+font-size: 14px;
+color: #ccc;
 }
 
 input, select {
 width: 100%;
-padding: 12px;
 margin-top: 6px;
-border-radius: 6px;
+padding: 14px;
+border-radius: 10px;
 border: none;
-background: #2a2a2a;
+background: #2b2b2b;
 color: #fff;
-font-size: 16px;
+font-size: 15px;
+}
+
+input::placeholder {
+color: #888;
 }
 
 button {
 width: 100%;
-padding: 14px;
-margin-top: 18px;
+margin-top: 22px;
+padding: 16px;
 border: none;
-border-radius: 6px;
-background: #00c853;
+border-radius: 10px;
+background: #0bbf4f;
 color: #fff;
-font-size: 17px;
-font-weight: bold;
+font-size: 18px;
+font-weight: 600;
 cursor: pointer;
+transition: 0.2s;
 }
 
 button:hover {
-background: #00a844;
+background: #09a944;
 }
 
-.info {
+.footer {
 text-align: center;
-margin-top: 12px;
+margin-top: 14px;
 font-size: 13px;
-color: #aaa;
+color: #888;
 }
 </style>
 
@@ -87,7 +98,6 @@ color: #aaa;
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
 <script>
-// ===== CONFIGURE SEU FIREBASE =====
 const firebaseConfig = {
 apiKey: "SUA_API_KEY",
 authDomain: "SEU_PROJETO.firebaseapp.com",
@@ -105,7 +115,8 @@ const db = firebase.database();
 </head>
 <body>
 
-<div class="container">
+<div class="card">
+
 <h1>Jose Barbearia</h1>
 
 <label>Nome</label> <input type="text" id="nome" placeholder="Digite seu nome">
@@ -127,11 +138,12 @@ const db = firebase.database();
 
 <button onclick="agendar()">Agendar</button>
 
-<div class="info">Horários ocupados não aparecem</div>
+<div class="footer">Horários ocupados não aparecem</div>
+
 </div>
 
 <script>
-const horasPadrao = [
+const horas = [
 "08:00","09:00","10:00","11:00",
 "13:00","14:00","15:00","16:00","17:00","18:00"
 ];
@@ -139,17 +151,15 @@ const horasPadrao = [
 const dataInput = document.getElementById("data");
 const horaSelect = document.getElementById("hora");
 
-dataInput.addEventListener("change", carregarHorarios);
-
-function carregarHorarios() {
+dataInput.addEventListener("change", () => {
 const data = dataInput.value;
 horaSelect.innerHTML = "<option>Carregando...</option>";
 
-db.ref("agendamentos").once("value", snapshot => {
+db.ref("agendamentos").once("value", snap => {
 
 let ocupados = [];
 
-snapshot.forEach(item => {
+snap.forEach(item => {
 const ag = item.val();
 if(ag.data === data){
 ocupados.push(ag.hora);
@@ -158,7 +168,7 @@ ocupados.push(ag.hora);
 
 horaSelect.innerHTML = "";
 
-horasPadrao.forEach(h => {
+horas.forEach(h => {
 if(!ocupados.includes(h)){
 let op = document.createElement("option");
 op.value = h;
@@ -172,15 +182,15 @@ horaSelect.innerHTML = "<option>Sem horários disponíveis</option>";
 }
 
 });
-}
+});
 
-function agendar() {
+function agendar(){
 const nome = document.getElementById("nome").value.trim();
 const servico = document.getElementById("servico").value;
 const data = dataInput.value;
 const hora = horaSelect.value;
 
-if(!nome || !servico || !data || !hora || hora.includes("Sem")){
+if(!nome || !servico || !data || !hora){
 alert("Preencha todos os campos");
 return;
 }
@@ -191,7 +201,6 @@ db.ref("agendamentos/" + id).once("value", snap => {
 
 if(snap.exists()){
 alert("Horário já ocupado");
-carregarHorarios();
 return;
 }
 
@@ -199,19 +208,15 @@ db.ref("agendamentos/" + id).set({
 nome,
 servico,
 data,
-hora,
-criadoEm: Date.now()
+hora
 });
 
-alert("Agendamento confirmado!");
-
 const numero = "5516997369740";
-const msg = `Olá, agendei ${servico} para o dia ${data} às ${hora}. Nome: ${nome}`;
+const msg = `Agendamento - ${nome}%0A${servico}%0A${data} às ${hora}`;
 
-window.open(`https://wa.me/${numero}?text=${encodeURIComponent(msg)}`);
+window.open(`https://wa.me/${numero}?text=${msg}`);
 
-document.getElementById("nome").value = "";
-
+alert("Agendado com sucesso!");
 });
 }
 </script>
