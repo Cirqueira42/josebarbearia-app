@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -9,68 +10,77 @@
 body{
   font-family: Arial;
   background:#111;
-  color:white;
+  color:#fff;
   text-align:center;
-  margin:0;
-  padding:20px;
 }
-h1{color:#00ff88;}
-input,button{
+.container{
+  max-width:400px;
+  margin:auto;
+  background:#1c1c1c;
+  padding:20px;
+  border-radius:10px;
+}
+input,select,button{
+  width:100%;
   padding:10px;
-  margin:5px;
-  border-radius:8px;
+  margin:8px 0;
+  border-radius:6px;
   border:none;
 }
 button{
-  background:#00ff88;
-  font-weight:bold;
-  cursor:pointer;
+  background:#00c853;
+  color:#fff;
+  font-size:16px;
+}
+.horarios{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
 }
 .horario{
-  display:inline-block;
-  padding:8px;
-  margin:4px;
-  background:#222;
+  background:#333;
+  padding:6px;
   border-radius:6px;
   cursor:pointer;
 }
 .horario.ocupado{
-  background:#550000;
-  text-decoration:line-through;
-  cursor:not-allowed;
+  background:#900;
 }
 .admin{
-  margin-top:40px;
-  padding:15px;
+  margin-top:30px;
   background:#222;
+  padding:15px;
   border-radius:10px;
 }
 </style>
 </head>
 <body>
 
-<h1>José Barbearia</h1>
+<div class="container">
+<h2>Agende seu horário</h2>
 
 <input type="text" id="nome" placeholder="Seu nome">
-<br>
 <input type="date" id="data">
-<div id="horarios"></div>
-<br>
-<button onclick="agendar()">Confirmar Agendamento</button>
-<p id="status"></p>
 
-<hr>
+<div class="horarios" id="listaHorarios"></div>
+
+<button onclick="agendar()">Confirmar Agendamento</button>
+
+<div id="status"></div>
 
 <div class="admin">
 <h3>Área Administrativa</h3>
 <input type="date" id="adminData">
-<button onclick="carregarAdmin()">Ver Agendamentos</button>
+<button onclick="carregarAdmin()">Ver Agenda</button>
 <button onclick="bloquearDia()">Bloquear Dia Inteiro</button>
 <div id="listaAdmin"></div>
 </div>
 
+</div>
+
 <script type="module">
 
+// ===== FIREBASE (COLE SUA CONFIG AQUI) =====
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getDatabase, ref, push, onValue, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
@@ -87,64 +97,58 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-const horariosDiv = document.getElementById("horarios");
-const dataInput = document.getElementById("data");
+// ===== HORÁRIOS 10 EM 10 MIN =====
+const listaHorarios = document.getElementById("listaHorarios");
 let horarioSelecionado = null;
 
 function gerarHorarios(){
-  horariosDiv.innerHTML="";
-  for(let h=8; h<=19; h++){
+  listaHorarios.innerHTML="";
+  for(let h=8; h<=18; h++){
     for(let m=0; m<60; m+=10){
-      const hora = String(h).padStart(2,"0");
-      const min = String(m).padStart(2,"0");
-      const horario = `${hora}:${min}`;
-
-      const div = document.createElement("div");
+      const hora = `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`;
+      const div=document.createElement("div");
       div.className="horario";
-      div.innerText=horario;
-
+      div.textContent=hora;
       div.onclick=()=>{
-        if(div.classList.contains("ocupado")) return;
-        document.querySelectorAll(".horario").forEach(h=>h.style.background="#222");
-        div.style.background="#00ff88";
-        horarioSelecionado=horario;
+        horarioSelecionado=hora;
+        document.querySelectorAll(".horario").forEach(el=>el.style.background="#333");
+        div.style.background="#00c853";
       };
-
-      horariosDiv.appendChild(div);
+      listaHorarios.appendChild(div);
     }
   }
 }
+gerarHorarios();
 
-dataInput.addEventListener("change", carregarHorarios);
+// ===== BLOQUEAR HORÁRIOS OCUPADOS =====
+document.getElementById("data").addEventListener("change",()=>{
+  const data=document.getElementById("data").value;
+  const refData=ref(db,"agendamentos/"+data);
 
-function carregarHorarios(){
-  gerarHorarios();
-  const data = dataInput.value;
-  if(!data) return;
-
-  const refData = ref(db,"agendamentos/"+data);
   onValue(refData,(snapshot)=>{
-    const dados = snapshot.val();
+    gerarHorarios();
+    const dados=snapshot.val();
     if(!dados) return;
 
     document.querySelectorAll(".horario").forEach(div=>{
-      const hora = div.innerText;
       for(let key in dados){
-        if(dados[key].horario===hora){
+        if(dados[key].horario===div.textContent){
           div.classList.add("ocupado");
+          div.onclick=null;
         }
       }
     });
   });
-}
+});
 
+// ===== AGENDAR =====
 window.agendar=function(){
   const nome=document.getElementById("nome").value;
-  const data=dataInput.value;
+  const data=document.getElementById("data").value;
   const status=document.getElementById("status");
 
-  if(!nome||!data||!horarioSelecionado){
-    status.innerText="Preencha tudo";
+  if(!nome || !data || !horarioSelecionado){
+    status.textContent="Preencha tudo";
     return;
   }
 
@@ -158,39 +162,53 @@ window.agendar=function(){
     profissional:"JOSE GILMARIO"
   };
 
-  push(ref(db,"agendamentos/"+data),agendamento)
-  .then(()=>{
+  push(ref(db,"agendamentos/"+data),agendamento).then(()=>{
 
-    const dataFormatada=new Date(data).toLocaleDateString("pt-BR",{
-      weekday:'long',
-      day:'numeric',
-      month:'long',
-      year:'numeric'
-    });
+    const dataFormatada=new Date(data).toLocaleDateString("pt-BR",{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 
-const mensagem=`Olá, ${nome} o seu agendamento com a *José Barbearia* foi confirmado!
+    const linkCancelamento = `${location.origin}${location.pathname}?cancelar=${codigo}&data=${data}`;
 
-*Serviço:* CORTE
-*Quando:* ${dataFormatada} às ${horarioSelecionado}
-*Profissional:* JOSE GILMARIO
-*Código:* ${codigo}
+    const mensagem=`Olá, ${nome} o seu agendamento com a *José Barbearia* foi confirmado!
 
-📍Endereço: Av. Otávio Rangel, 477 - Vila Cecap, Guariba - SP
+Serviço: CORTE
+Quando: ${dataFormatada} às ${horarioSelecionado}
+Profissional: JOSE GILMARIO
+Código: ${codigo}
 
-📍Link Google Maps:
-https://maps.app.goo.gl/JVahTmuAYLfAiyx57
+Endereço: Av. Otávio Rangel, 477 - Guariba - SP
 
-Para mais informações ou cancelar:
-https://nextgoagenda.com/josebarbearia/bookings/${codigo}`;
+Cancelar:
+${linkCancelamento}`;
 
-    window.open(`https://wa.me/5516997369740?text=${encodeURIComponent(mensagem)}`,"_blank");
+    const url=`https://wa.me/5516997369740?text=${encodeURIComponent(mensagem)}`;
+    window.open(url,"_blank");
 
-    status.innerText="Agendamento confirmado!";
-    horarioSelecionado=null;
-    carregarHorarios();
+    status.textContent="Agendado!";
   });
+};
+
+// ===== CANCELAMENTO POR LINK =====
+const params=new URLSearchParams(window.location.search);
+const codigoCancelar=params.get("cancelar");
+const dataCancelar=params.get("data");
+
+if(codigoCancelar && dataCancelar){
+  const refData=ref(db,"agendamentos/"+dataCancelar);
+  onValue(refData,(snapshot)=>{
+    const dados=snapshot.val();
+    if(!dados) return;
+
+    for(let key in dados){
+      if(dados[key].codigo===codigoCancelar){
+        set(ref(db,"agendamentos/"+dataCancelar+"/"+key),null);
+        alert("Agendamento cancelado");
+        window.location.href=location.pathname;
+      }
+    }
+  },{onlyOnce:true});
 }
 
+// ===== ADMIN =====
 window.carregarAdmin=function(){
   const data=document.getElementById("adminData").value;
   const lista=document.getElementById("listaAdmin");
@@ -198,25 +216,39 @@ window.carregarAdmin=function(){
 
   onValue(ref(db,"agendamentos/"+data),(snapshot)=>{
     const dados=snapshot.val();
+    lista.innerHTML="";
+
     if(!dados){
-      lista.innerHTML="Sem agendamentos";
+      lista.innerHTML="Nenhum agendamento";
       return;
     }
+
     for(let key in dados){
-      lista.innerHTML+=`<p>${dados[key].horario} - ${dados[key].nome}</p>`;
+      lista.innerHTML+=`
+      <div style="background:#333;padding:8px;margin:6px;border-radius:6px">
+        ${dados[key].horario} - ${dados[key].nome}<br>
+        Código: ${dados[key].codigo}<br>
+        <button onclick="cancelarAdmin('${data}','${key}')">Cancelar</button>
+      </div>`;
     }
   });
-}
+};
 
+window.cancelarAdmin=function(data,key){
+  if(confirm("Cancelar agendamento?")){
+    set(ref(db,"agendamentos/"+data+"/"+key),null);
+  }
+};
+
+// ===== BLOQUEAR DIA =====
 window.bloquearDia=function(){
   const data=document.getElementById("adminData").value;
-  if(!data) return;
-  set(ref(db,"agendamentos/"+data+"/bloqueado"),true);
-  alert("Dia bloqueado!");
-}
-
-gerarHorarios();
+  if(confirm("Bloquear dia inteiro?")){
+    set(ref(db,"agendamentos/"+data),{bloqueado:true});
+  }
+};
 
 </script>
 </body>
 </html>
+```
