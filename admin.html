@@ -8,27 +8,24 @@
 <body>
 
   <h1>Painel da Barbearia</h1>
-  <h2>Agendamentos</h2>
 
-  <ul id="listaAgendamentos"></ul>
+  <ul id="lista"></ul>
 
-  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-
   <script src="firebase-config.js"></script>
 
   <script>
-    const lista = document.getElementById("listaAgendamentos");
+    const lista = document.getElementById("lista");
 
     db.collection("agendamentos")
       .orderBy("criadoEm", "desc")
       .onSnapshot(snapshot => {
         lista.innerHTML = "";
         snapshot.forEach(doc => {
-          const ag = doc.data();
+          const a = doc.data();
           const li = document.createElement("li");
-          li.textContent = ag.nome + " - " + ag.data + " às " + ag.hora;
+          li.textContent = `${a.nome} | ${a.servico} | ${a.data} ${a.hora}`;
           lista.appendChild(li);
         });
       });
