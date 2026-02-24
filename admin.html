@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Painel Admin - Barbearia</title>
+</head>
+<body>
+
+  <h1>Painel da Barbearia</h1>
+
+  <h2>Agendamentos Recebidos</h2>
+  <ul id="listaAgendamentos"></ul>
+
+  <!-- Firebase CDN -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+  <!-- Config Firebase -->
+  <script src="firebase-config.js"></script>
+
+  <script>
+    const lista = document.getElementById("listaAgendamentos");
+
+    db.collection("agendamentos")
+      .orderBy("criadoEm", "desc")
+      .onSnapshot(snapshot => {
+        lista.innerHTML = "";
+        snapshot.forEach(doc => {
+          const ag = doc.data();
+          const li = document.createElement("li");
+          li.textContent = ag.nome + " - " + ag.data + " às " + ag.hora;
+          lista.appendChild(li);
+        });
+      });
+  </script>
+
+</body>
+</html>
