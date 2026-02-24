@@ -1,4 +1,3 @@
-```html
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -7,57 +6,39 @@
 <title>José Barbearia</title>
 
 <style>
-body{
-  font-family: Arial;
-  background:#111;
-  color:#fff;
-  text-align:center;
-}
-.container{
-  max-width:400px;
-  margin:auto;
-  background:#1c1c1c;
-  padding:20px;
-  border-radius:10px;
-}
-input,select,button{
-  width:100%;
-  padding:10px;
-  margin:8px 0;
-  border-radius:6px;
-  border:none;
-}
-button{
-  background:#00c853;
-  color:#fff;
-  font-size:16px;
-}
-.horarios{
-  display:flex;
-  flex-wrap:wrap;
-  gap:6px;
-}
-.horario{
-  background:#333;
-  padding:6px;
-  border-radius:6px;
-  cursor:pointer;
-}
-.horario.ocupado{
-  background:#900;
-}
-.admin{
-  margin-top:30px;
-  background:#222;
-  padding:15px;
-  border-radius:10px;
-}
+body{margin:0;font-family:Arial;background:#0f0f0f;color:#fff}
+.header{background:#000;padding:20px;text-align:center;border-bottom:2px solid #00c853}
+.header h1{margin:0;color:#00c853}
+.container{max-width:420px;margin:auto;padding:15px}
+.card{background:#1c1c1c;padding:15px;border-radius:12px;margin-bottom:15px}
+input,select,button{width:100%;padding:12px;margin-top:8px;border-radius:8px;border:none;font-size:16px}
+button{background:#00c853;color:#fff;font-weight:bold}
+.horarios{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.horario{width:30%;padding:8px;background:#333;text-align:center;border-radius:6px;cursor:pointer}
+.horario.sel{background:#00c853}
+.horario.ocupado{background:#900;pointer-events:none}
+.admin{background:#222;padding:15px;border-radius:10px;margin-top:20px}
+.footer{text-align:center;font-size:13px;margin-top:20px;opacity:.7}
 </style>
 </head>
 <body>
 
+<div class="header">
+<h1>José Barbearia</h1>
+<div>Funcionamento: 09:00 às 19:00</div>
+</div>
+
 <div class="container">
-<h2>Agende seu horário</h2>
+
+<div class="card">
+<h3>Agendar Horário</h3>
+
+<select id="servico">
+<option value="45|30">Corte – R$30 (45min)</option>
+<option value="30|20">Barba – R$20 (30min)</option>
+<option value="60|45">Cabelo + Barba – R$45 (60min)</option>
+<option value="40|25">Corte Infantil – R$25 (40min)</option>
+</select>
 
 <input type="text" id="nome" placeholder="Seu nome">
 <input type="date" id="data">
@@ -65,190 +46,212 @@ button{
 <div class="horarios" id="listaHorarios"></div>
 
 <button onclick="agendar()">Confirmar Agendamento</button>
-
 <div id="status"></div>
+</div>
 
+<div id="adminArea" style="display:none">
 <div class="admin">
 <h3>Área Administrativa</h3>
 <input type="date" id="adminData">
 <button onclick="carregarAdmin()">Ver Agenda</button>
-<button onclick="bloquearDia()">Bloquear Dia Inteiro</button>
+<button onclick="bloquearDia()">Bloquear Dia</button>
 <div id="listaAdmin"></div>
+</div>
+</div>
+
+<div class="footer">
+Sistema Profissional de Agendamento
 </div>
 
 </div>
 
 <script type="module">
 
-// ===== FIREBASE (COLE SUA CONFIG AQUI) =====
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getDatabase, ref, push, onValue, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+// ===== MOSTRAR ADMIN =====
+const params=new URLSearchParams(location.search);
+if(params.get("admin")==="1020"){
+document.getElementById("adminArea").style.display="block";
+}
 
-const firebaseConfig = {
-  apiKey: "COLE_AQUI",
-  authDomain: "COLE_AQUI",
-  databaseURL: "COLE_AQUI",
-  projectId: "COLE_AQUI",
-  storageBucket: "COLE_AQUI",
-  messagingSenderId: "COLE_AQUI",
-  appId: "COLE_AQUI"
+// ===== FIREBASE (COLE SUA CONFIG AQUI) =====
+import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import{getDatabase,ref,push,onValue,set}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+const firebaseConfig={
+apiKey:"COLE_AQUI",
+authDomain:"COLE_AQUI",
+databaseURL:"COLE_AQUI",
+projectId:"COLE_AQUI",
+storageBucket:"COLE_AQUI",
+messagingSenderId:"COLE_AQUI",
+appId:"COLE_AQUI"
 };
 
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
+const app=initializeApp(firebaseConfig);
+const db=getDatabase(app);
 
-// ===== HORÁRIOS 10 EM 10 MIN =====
-const listaHorarios = document.getElementById("listaHorarios");
-let horarioSelecionado = null;
+// ===== GERAR HORÁRIOS 10 EM 10 MIN =====
+const lista=document.getElementById("listaHorarios");
+let horarioSel=null;
 
 function gerarHorarios(){
-  listaHorarios.innerHTML="";
-  for(let h=8; h<=18; h++){
-    for(let m=0; m<60; m+=10){
-      const hora = `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`;
-      const div=document.createElement("div");
-      div.className="horario";
-      div.textContent=hora;
-      div.onclick=()=>{
-        horarioSelecionado=hora;
-        document.querySelectorAll(".horario").forEach(el=>el.style.background="#333");
-        div.style.background="#00c853";
-      };
-      listaHorarios.appendChild(div);
-    }
-  }
+lista.innerHTML="";
+const hoje=new Date();
+const dataSel=document.getElementById("data").value;
+const agoraMin=hoje.getHours()*60+hoje.getMinutes();
+
+for(let h=9;h<19;h++){
+for(let m=0;m<60;m+=10){
+
+let total=h*60+m;
+
+if(dataSel===hoje.toISOString().split("T")[0] && total<=agoraMin) continue;
+
+const hora=`${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`;
+const div=document.createElement("div");
+div.className="horario";
+div.textContent=hora;
+
+div.onclick=()=>{
+document.querySelectorAll(".horario").forEach(e=>e.classList.remove("sel"));
+div.classList.add("sel");
+horarioSel=hora;
+};
+
+lista.appendChild(div);
+}}
 }
-gerarHorarios();
 
-// ===== BLOQUEAR HORÁRIOS OCUPADOS =====
+// ===== BLOQUEAR OCUPADOS POR DURAÇÃO =====
 document.getElementById("data").addEventListener("change",()=>{
-  const data=document.getElementById("data").value;
-  const refData=ref(db,"agendamentos/"+data);
+gerarHorarios();
+const data=document.getElementById("data").value;
 
-  onValue(refData,(snapshot)=>{
-    gerarHorarios();
-    const dados=snapshot.val();
-    if(!dados) return;
+onValue(ref(db,"agendamentos/"+data),(snap)=>{
+const dados=snap.val();
+if(!dados)return;
 
-    document.querySelectorAll(".horario").forEach(div=>{
-      for(let key in dados){
-        if(dados[key].horario===div.textContent){
-          div.classList.add("ocupado");
-          div.onclick=null;
-        }
-      }
-    });
-  });
+document.querySelectorAll(".horario").forEach(div=>{
+let inicio=div.textContent.split(":");
+let minDiv=parseInt(inicio[0])*60+parseInt(inicio[1]);
+
+for(let k in dados){
+let h=dados[k].horario.split(":");
+let minAg=parseInt(h[0])*60+parseInt(h[1]);
+let dur=dados[k].duracao;
+
+if(minDiv>=minAg && minDiv<minAg+dur){
+div.classList.add("ocupado");
+}
+}
 });
+});
+});
+
+gerarHorarios();
 
 // ===== AGENDAR =====
 window.agendar=function(){
-  const nome=document.getElementById("nome").value;
-  const data=document.getElementById("data").value;
-  const status=document.getElementById("status");
+const nome=document.getElementById("nome").value;
+const data=document.getElementById("data").value;
+const status=document.getElementById("status");
+const serv=document.getElementById("servico").value.split("|");
+const dur=parseInt(serv[0]);
+const valor=serv[1];
 
-  if(!nome || !data || !horarioSelecionado){
-    status.textContent="Preencha tudo";
-    return;
-  }
+if(!nome||!data||!horarioSel){
+status.textContent="Preencha tudo";
+return;
+}
 
-  const codigo=Math.random().toString(36).substring(2,10).toUpperCase();
+const codigo=Math.random().toString(36).substring(2,9).toUpperCase();
 
-  const agendamento={
-    nome,
-    horario:horarioSelecionado,
-    codigo,
-    servico:"CORTE",
-    profissional:"JOSE GILMARIO"
-  };
+push(ref(db,"agendamentos/"+data),{
+nome,
+horario:horarioSel,
+duracao:dur,
+valor,
+codigo
+}).then(()=>{
 
-  push(ref(db,"agendamentos/"+data),agendamento).then(()=>{
+const dataFmt=new Date(data).toLocaleDateString("pt-BR");
+const linkCancel=`${location.origin}${location.pathname}?cancelar=${codigo}&data=${data}`;
 
-    const dataFormatada=new Date(data).toLocaleDateString("pt-BR",{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+const msg=`Olá ${nome}, seu agendamento foi confirmado!
 
-    const linkCancelamento = `${location.origin}${location.pathname}?cancelar=${codigo}&data=${data}`;
-
-    const mensagem=`Olá, ${nome} o seu agendamento com a *José Barbearia* foi confirmado!
-
-Serviço: CORTE
-Quando: ${dataFormatada} às ${horarioSelecionado}
-Profissional: JOSE GILMARIO
+Serviço: ${document.getElementById("servico").selectedOptions[0].text}
+Data: ${dataFmt}
+Hora: ${horarioSel}
+Profissional: José Gilmario
 Código: ${codigo}
 
-Endereço: Av. Otávio Rangel, 477 - Guariba - SP
-
 Cancelar:
-${linkCancelamento}`;
+${linkCancel}`;
 
-    const url=`https://wa.me/5516997369740?text=${encodeURIComponent(mensagem)}`;
-    window.open(url,"_blank");
+window.open(`https://wa.me/5516997369740?text=${encodeURIComponent(msg)}`,"_blank");
 
-    status.textContent="Agendado!";
-  });
+status.textContent="Agendamento confirmado!";
+});
 };
 
 // ===== CANCELAMENTO POR LINK =====
-const params=new URLSearchParams(window.location.search);
-const codigoCancelar=params.get("cancelar");
-const dataCancelar=params.get("data");
+const cod=params.get("cancelar");
+const dataC=params.get("data");
 
-if(codigoCancelar && dataCancelar){
-  const refData=ref(db,"agendamentos/"+dataCancelar);
-  onValue(refData,(snapshot)=>{
-    const dados=snapshot.val();
-    if(!dados) return;
+if(cod&&dataC){
+onValue(ref(db,"agendamentos/"+dataC),(snap)=>{
+const dados=snap.val();
+if(!dados)return;
 
-    for(let key in dados){
-      if(dados[key].codigo===codigoCancelar){
-        set(ref(db,"agendamentos/"+dataCancelar+"/"+key),null);
-        alert("Agendamento cancelado");
-        window.location.href=location.pathname;
-      }
-    }
-  },{onlyOnce:true});
+for(let k in dados){
+if(dados[k].codigo===cod){
+set(ref(db,"agendamentos/"+dataC+"/"+k),null);
+alert("Agendamento cancelado com sucesso");
+location.href=location.pathname;
+}
+}
+},{onlyOnce:true});
 }
 
 // ===== ADMIN =====
 window.carregarAdmin=function(){
-  const data=document.getElementById("adminData").value;
-  const lista=document.getElementById("listaAdmin");
-  lista.innerHTML="";
+const data=document.getElementById("adminData").value;
+const lista=document.getElementById("listaAdmin");
 
-  onValue(ref(db,"agendamentos/"+data),(snapshot)=>{
-    const dados=snapshot.val();
-    lista.innerHTML="";
+onValue(ref(db,"agendamentos/"+data),(snap)=>{
+const dados=snap.val();
+lista.innerHTML="";
+let total=0;
 
-    if(!dados){
-      lista.innerHTML="Nenhum agendamento";
-      return;
-    }
+if(!dados){
+lista.innerHTML="Nenhum agendamento";
+return;
+}
 
-    for(let key in dados){
-      lista.innerHTML+=`
-      <div style="background:#333;padding:8px;margin:6px;border-radius:6px">
-        ${dados[key].horario} - ${dados[key].nome}<br>
-        Código: ${dados[key].codigo}<br>
-        <button onclick="cancelarAdmin('${data}','${key}')">Cancelar</button>
-      </div>`;
-    }
-  });
+for(let k in dados){
+total+=parseInt(dados[k].valor);
+lista.innerHTML+=`
+<div style="background:#333;padding:8px;margin:6px;border-radius:6px">
+${dados[k].horario} - ${dados[k].nome} (R$${dados[k].valor})
+<button onclick="cancelarAdmin('${data}','${k}')">Cancelar</button>
+</div>`;
+}
+
+lista.innerHTML+=`<hr><b>Faturamento do dia: R$${total}</b>`;
+});
 };
 
-window.cancelarAdmin=function(data,key){
-  if(confirm("Cancelar agendamento?")){
-    set(ref(db,"agendamentos/"+data+"/"+key),null);
-  }
+window.cancelarAdmin=function(data,k){
+set(ref(db,"agendamentos/"+data+"/"+k),null);
 };
 
-// ===== BLOQUEAR DIA =====
 window.bloquearDia=function(){
-  const data=document.getElementById("adminData").value;
-  if(confirm("Bloquear dia inteiro?")){
-    set(ref(db,"agendamentos/"+data),{bloqueado:true});
-  }
+const data=document.getElementById("adminData").value;
+if(confirm("Bloquear esse dia?")){
+set(ref(db,"agendamentos/"+data),{bloqueado:true});
+}
 };
 
 </script>
 </body>
 </html>
-```
