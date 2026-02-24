@@ -24,8 +24,20 @@
   <script>
     const lista = document.getElementById("listaAgendamentos");
 
+    function excluirAgendamento(id) {
+      if (confirm("Excluir este agendamento?")) {
+        db.collection("agendamentos").doc(id).delete()
+          .then(() => {
+            alert("Agendamento excluído!");
+          })
+          .catch(error => {
+            alert("Erro ao excluir: " + error);
+          });
+      }
+    }
+
     db.collection("agendamentos")
-      .orderBy("criadoEm", "desc")
+      .orderBy("data")
       .onSnapshot(snapshot => {
         lista.innerHTML = "";
 
@@ -33,14 +45,13 @@
           const ag = doc.data();
 
           const li = document.createElement("li");
-          li.textContent =
-            ag.nome +
-            " | " +
-            ag.servico +
-            " | " +
-            ag.data +
-            " às " +
-            ag.hora;
+
+          li.innerHTML =
+            "<strong>" + ag.nome + "</strong> | " +
+            ag.servico + " | " +
+            ag.data + " às " +
+            ag.hora +
+            " <button onclick=\"excluirAgendamento('" + doc.id + "')\">Excluir</button>";
 
           lista.appendChild(li);
         });
