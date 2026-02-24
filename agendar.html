@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Agendamento</title>
+  <title>Agendar Horário</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -10,10 +10,19 @@
   <h1>Agendar Horário</h1>
 
   <input type="text" id="nome" placeholder="Seu nome">
+
+  <select id="servico">
+    <option value="">Selecione o serviço</option>
+    <option value="Corte">Corte - R$ 30</option>
+    <option value="Barba">Barba - R$ 20</option>
+    <option value="Corte + Barba">Corte + Barba - R$ 45</option>
+    <option value="Corte Infantil">Corte Infantil - R$ 25</option>
+  </select>
+
   <input type="date" id="data">
   <input type="time" id="hora">
 
-  <button onclick="agendar()">Confirmar</button>
+  <button onclick="agendar()">Confirmar Agendamento</button>
 
   <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -25,15 +34,16 @@
   <script>
     function agendar() {
       const nome = document.getElementById("nome").value;
+      const servico = document.getElementById("servico").value;
       const data = document.getElementById("data").value;
       const hora = document.getElementById("hora").value;
 
-      if (!nome || !data || !hora) {
+      if (!nome || !servico || !data || !hora) {
         alert("Preencha todos os campos!");
         return;
       }
 
-      salvarAgendamento(nome, data, hora);
+      salvarAgendamento(nome, servico, data, hora);
     }
   </script>
 
