@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -40,7 +41,7 @@ gap:10px;
 margin-top:20px;
 }
 
-.btn-horario{
+.horarios button{
 padding:14px;
 border:none;
 border-radius:10px;
@@ -58,15 +59,14 @@ border:none;
 border-radius:12px;
 font-size:18px;
 color:#fff;
-font-weight:bold;
 }
 
 #status{
 margin-top:10px;
 text-align:center;
-font-weight:bold;
 }
 </style>
+
 </head>
 
 <body>
@@ -75,7 +75,7 @@ font-weight:bold;
 <h1>José Barbearia</h1>
 
 <input id="nome" placeholder="Seu nome">
-<input id="telefone" placeholder="Telefone (somente números)">
+<input id="telefone" placeholder="Telefone">
 
 <select id="servico">
 <option value="45">Corte - 45min</option>
@@ -94,11 +94,16 @@ font-weight:bold;
 <div id="status"></div>
 </div>
 
+<!-- Firebase -->
+
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
 <script>
-// 🔥 COLE SEU FIREBASE AQUI
+// =======================
+// CONFIG FIREBASE (COLE O SEU)
+// =======================
 const firebaseConfig = {
 apiKey: "SUA_API_KEY",
 authDomain: "SEU_PROJETO.firebaseapp.com",
@@ -112,173 +117,182 @@ appId: "XXXX"
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
+// =======================
 let horarioSelecionado = null;
-let duracaoSelecionada = 0;
-
 const inputData = document.getElementById("data");
-const hojeISO = new Date().toISOString().split("T")[0];
-inputData.min = hojeISO;
+const divHorarios = document.getElementById("horarios");
 
+// Data de hoje (fuso local correto)
+const agora = new Date();
+const hojeISO = agora.getFullYear() + "-" +
+String(agora.getMonth()+1).padStart(2,'0') + "-" +
+String(agora.getDate()).padStart(2,'0');
+
+// Define mínimo e já seleciona hoje
+inputData.min = hojeISO;
+inputData.value = hojeISO;
+
+// Ao abrir o site já carrega horários de hoje
+window.onload = function(){
+gerarHorarios(hojeISO);
+verificarCancelamento();
+};
+
+// Atualiza ao mudar data
 inputData.addEventListener("change", function(){
 gerarHorarios(this.value);
 });
 
-// 🔥 GERAR HORÁRIOS CORRIGIDO DEFINITIVO
+// =======================
+// GERAR HORÁRIOS
+// =======================
 function gerarHorarios(dataSelecionada){
 
-const container = document.getElementById("horarios");
-container.innerHTML = "";
-
-if(!dataSelecionada) return;
+divHorarios.innerHTML = "";
+horarioSelecionado = null;
 
 const agora = new Date();
+
+// Zera horas para comparação
 const hoje = new Date();
 hoje.setHours(0,0,0,0);
 
 const dataEscolhida = new Date(dataSelecionada + "T00:00:00");
 dataEscolhida.setHours(0,0,0,0);
 
+// Bloqueia datas passadas
 if(dataEscolhida < hoje){
-container.innerHTML = "<p style='color:red'>Data indisponível</p>";
+divHorarios.innerHTML = "<p style='color:red'>Data indisponível</p>";
 return;
 }
 
-db.ref("agendamentos/"+dataSelecionada).once("value", snapshot=>{
+// Busca ocupados no Firebase
+db.ref("agendamentos/" + dataSelecionada).once("value", snapshot => {
 
 const ocupados = snapshot.val() || {};
 
-const inicioExpediente = 9;
-const fimExpediente = 19;
+const inicio = 9;
+const fim = 19;
 
-for(let hora = inicioExpediente; hora < fimExpediente; hora++){
+for(let h=inicio; h<fim; h++){
+for(let m=0; m<60; m+=10){
 
-for(let minuto = 0; minuto < 60; minuto += 10){
+let hora = String(h).padStart(2,'0') + ":" + String(m).padStart(2,'0');
+let dataHora = new Date(dataSelecionada + "T" + hora);
 
-let horaFormatada = hora.toString().padStart(2,'0');
-let minutoFormatado = minuto.toString().padStart(2,'0');
-let horarioTexto = horaFormatada + ":" + minutoFormatado;
-
-let dataHoraSlot = new Date(dataSelecionada + "T" + horarioTexto);
-
-// bloquear passado do dia atual
+// Se for hoje, bloqueia horários passados
 if(dataEscolhida.getTime() === hoje.getTime()){
-if(dataHoraSlot <= agora) continue;
+if(dataHora <= agora) continue;
 }
 
-// se já ocupado não mostra
-if(ocupados[horarioTexto]) continue;
+// Se ocupado
+if(ocupados[hora]) continue;
 
 let btn = document.createElement("button");
-btn.innerText = horarioTexto;
-btn.className = "btn-horario";
+btn.innerText = hora;
 
 btn.onclick = function(){
-
-document.querySelectorAll(".btn-horario").forEach(b=>{
+document.querySelectorAll(".horarios button").forEach(b=>{
 b.style.background="#1f1f1f";
 });
-
 btn.style.background="#00c853";
-horarioSelecionado = horarioTexto;
+horarioSelecionado = hora;
 };
 
-container.appendChild(btn);
+divHorarios.appendChild(btn);
 }
 }
+
+if(divHorarios.innerHTML === ""){
+divHorarios.innerHTML = "<p>Sem horários disponíveis</p>";
+}
+
 });
 }
 
-// 🔥 AGENDAR
+// =======================
+// AGENDAR
+// =======================
 function agendar(){
 
 const nome = document.getElementById("nome").value;
 const telefone = document.getElementById("telefone").value;
-const data = document.getElementById("data").value;
+const data = inputData.value;
 const duracao = parseInt(document.getElementById("servico").value);
 const status = document.getElementById("status");
 
 if(!nome || !telefone || !data || !horarioSelecionado){
-status.innerText="Preencha todos os campos";
+status.innerText="Preencha tudo";
 return;
 }
 
 let inicio = new Date(data+"T"+horarioSelecionado);
 
-// bloquear todos os slots da duração
+// Bloqueia conforme duração
 for(let i=0;i<duracao;i+=10){
 let slot = new Date(inicio.getTime() + i*60000);
 let hora = slot.toTimeString().slice(0,5);
 
 db.ref("agendamentos/"+data+"/"+hora).set({
 nome,
-telefone,
-inicio: horarioSelecionado,
-duracao
+telefone
 });
 }
 
-// link cancelamento
-const linkCancelamento = 
-window.location.origin+
-window.location.pathname+
-"?cancelar="+data+"_"+horarioSelecionado+"_"+duracao;
+// Link cancelamento
+const linkCancelamento = window.location.origin + window.location.pathname +
+"?cancelar=" + data + "_" + horarioSelecionado;
 
+// WhatsApp cliente
 const msg = `Olá ${nome}, seu horário foi confirmado!
 
 Data: ${data}
 Hora: ${horarioSelecionado}
 
-Para cancelar:
+Cancelar:
 ${linkCancelamento}`;
 
 window.open("https://wa.me/55"+telefone+"?text="+encodeURIComponent(msg));
 
 status.innerText="Agendamento confirmado!";
-horarioSelecionado=null;
 gerarHorarios(data);
 }
 
-// 🔥 CANCELAMENTO INTELIGENTE
-window.onload = function(){
+// =======================
+// CANCELAMENTO
+// =======================
+function verificarCancelamento(){
 
 const url = new URL(window.location.href);
 const cancelar = url.searchParams.get("cancelar");
 
-if(cancelar){
+if(!cancelar) return;
 
 const partes = cancelar.split("_");
 const data = partes[0];
 const hora = partes[1];
-const duracao = parseInt(partes[2]);
 
 if(confirm("Deseja cancelar o horário das "+hora+"?")){
 
-let inicio = new Date(data+"T"+hora);
-
-for(let i=0;i<duracao;i+=10){
-let slot = new Date(inicio.getTime() + i*60000);
+for(let i=0;i<60;i+=10){
+let slot = new Date(data+"T"+hora);
+slot = new Date(slot.getTime() + i*60000);
 let h = slot.toTimeString().slice(0,5);
 db.ref("agendamentos/"+data+"/"+h).remove();
 }
 
-alert("Cancelamento confirmado!");
-
-// aviso pra você
-const mensagem = `Cancelamento confirmado!
-
-Data: ${data}
-Hora: ${hora}`;
-
+// Aviso para você
 window.open(
-"https://wa.me/5516997369740?text="+encodeURIComponent(mensagem),
+"https://wa.me/5516997369740?text="+encodeURIComponent(
+"Cancelamento confirmado!\nData: "+data+"\nHora: "+hora
+),
 "_blank"
 );
 
+alert("Cancelado com sucesso!");
 window.location.href = window.location.pathname;
 }
 }
-};
-
 </script>
 
 </body>
