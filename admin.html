@@ -3,210 +3,61 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Painel ADM - José Barbearia</title>
+<title>Painel ADM</title>
 
 <style>
-body{
-background:#0b0b0b;
-color:#fff;
-font-family:Arial;
-margin:0;
-}
-.container{
-max-width:500px;
-margin:auto;
-padding:20px;
-}
-h1{
-text-align:center;
-color:#00c853;
-}
-input,button{
-width:100%;
-padding:12px;
-margin-top:10px;
-border-radius:8px;
-border:none;
-font-size:16px;
-}
-button{
-background:#00c853;
-color:#fff;
-}
-.card{
-background:#1f1f1f;
-padding:10px;
-border-radius:8px;
-margin-top:10px;
-}
-.danger{
-background:#d50000;
-}
-.hidden{
-display:none;
-}
+body{background:#0b0b0b;color:#fff;font-family:Arial;padding:20px;}
+button{width:100%;padding:12px;margin-top:10px;background:#00c853;border:none;border-radius:8px;color:#fff;}
+.card{background:#1f1f1f;padding:10px;margin-top:10px;border-radius:8px;}
 </style>
 
 </head>
-
 <body>
 
-<div class="container">
+<h2>Painel Administrativo</h2>
 
-<h1>Painel ADM</h1>
-
-<div id="login">
-<input type="password" id="senha" placeholder="Digite a senha">
-<button onclick="entrar()">Entrar</button>
-</div>
-
-<div id="painel" class="hidden">
-
-<h3>Bloqueios</h3>
-<input type="date" id="dataBloqueio">
-<button onclick="bloquearDia()">Bloquear Dia Inteiro</button>
-
-<h4>Bloquear horário específico</h4>
-<input type="time" id="horaBloqueio">
-<button onclick="bloquearHorario()">Bloquear Horário</button>
-
-<h3>Clientes</h3>
-<input type="date" id="dataBusca">
-<button onclick="listarDia()">Clientes do Dia</button>
-<button onclick="listarSemana()">Semana</button>
-<button onclick="listarMes()">Mês</button>
+<input type="date" id="data">
+<button onclick="ver()">Ver Clientes</button>
+<button onclick="bloquear()">Bloquear Dia</button>
 
 <div id="lista"></div>
-
-</div>
-</div>
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
 <script>
-// COLE SEU FIREBASE AQUI
 const firebaseConfig = {
-apiKey: "SUA_API_KEY",
-authDomain: "SEU_PROJETO.firebaseapp.com",
-databaseURL: "https://SEU_PROJETO-default-rtdb.firebaseio.com",
-projectId: "SEU_PROJETO",
-storageBucket: "SEU_PROJETO.appspot.com",
-messagingSenderId: "XXXX",
-appId: "XXXX"
+// MESMO FIREBASE
 };
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// LOGIN
-function entrar(){
-const senha = document.getElementById("senha").value;
-if(senha === "1020"){
-document.getElementById("login").classList.add("hidden");
-document.getElementById("painel").classList.remove("hidden");
-}else{
-alert("Senha incorreta");
-}
-}
+function ver(){
+const d=data.value;
+lista.innerHTML="";
 
-// BLOQUEAR DIA
-function bloquearDia(){
-const data = document.getElementById("dataBloqueio").value;
-if(!data) return alert("Escolha uma data");
+db.ref("agendamentos/"+d).once("value",snap=>{
+const dados=snap.val();
+if(!dados){lista.innerHTML="Sem clientes";return;}
 
-for(let h=9; h<19; h++){
-for(let m=0; m<60; m+=10){
-let hora = (h<10?"0"+h:h)+":"+(m==0?"00":m);
-db.ref("agendamentos/"+data+"/"+hora).set({
-bloqueado:true
+Object.keys(dados).forEach(h=>{
+let c=dados[h];
+lista.innerHTML+=`<div class='card'>${h} - ${c.nome} - ${c.telefone}</div>`;
 });
-}
-}
-alert("Dia bloqueado!");
-}
-
-// BLOQUEAR HORÁRIO
-function bloquearHorario(){
-const data = document.getElementById("dataBloqueio").value;
-const hora = document.getElementById("horaBloqueio").value;
-if(!data || !hora) return alert("Preencha data e hora");
-
-db.ref("agendamentos/"+data+"/"+hora).set({
-bloqueado:true
-});
-alert("Horário bloqueado!");
-}
-
-// LISTAR DIA
-function listarDia(){
-const data = document.getElementById("dataBusca").value;
-if(!data) return alert("Escolha uma data");
-
-db.ref("agendamentos/"+data).once("value", snap=>{
-mostrarLista(snap.val());
 });
 }
 
-// LISTAR SEMANA
-function listarSemana(){
-const hoje = new Date();
-const lista = {};
-for(let i=0;i<7;i++){
-let d = new Date(hoje.getTime() + i*86400000);
-let data = d.toISOString().split("T")[0];
-db.ref("agendamentos/"+data).once("value", snap=>{
-if(snap.exists()){
-mostrarLista(snap.val(), data);
-}
-});
+function bloquear(){
+const d=data.value;
+for(let h=9;h<19;h++){
+for(let m=0;m<60;m+=10){
+let hora=String(h).padStart(2,'0')+":"+String(m).padStart(2,'0');
+db.ref("agendamentos/"+d+"/"+hora).set({nome:"BLOQUEADO"});
 }
 }
-
-// LISTAR MÊS
-function listarMes(){
-const hoje = new Date();
-const mes = hoje.getMonth();
-const ano = hoje.getFullYear();
-
-for(let d=1; d<=31; d++){
-let data = new Date(ano, mes, d);
-if(data.getMonth() !== mes) break;
-
-let dataStr = data.toISOString().split("T")[0];
-
-db.ref("agendamentos/"+dataStr).once("value", snap=>{
-if(snap.exists()){
-mostrarLista(snap.val(), dataStr);
-}
-});
-}
-}
-
-function mostrarLista(dados, dataRef=""){
-const lista = document.getElementById("lista");
-lista.innerHTML += `<h4>${dataRef}</h4>`;
-
-for(let hora in dados){
-let ag = dados[hora];
-if(ag.nome){
-lista.innerHTML += `
-<div class="card">
-<strong>${hora}</strong><br>
-Nome: ${ag.nome}<br>
-Tel: ${ag.telefone}<br>
-<button class="danger" onclick="excluir('${dataRef}','${hora}')">Excluir</button>
-</div>
-`;
-}
-}
-}
-
-function excluir(data,hora){
-db.ref("agendamentos/"+data+"/"+hora).remove();
-alert("Excluído!");
+alert("Dia bloqueado");
 }
 </script>
 
