@@ -4,21 +4,34 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Jose Barbearia</title>
+<title>José Barbearia</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <div class="container">
-    <h1>Jose Barbearia</h1>
-    <p>Agende seu horário online</p>
+    <h1 class="logo">José Barbearia</h1>
 
 ```
-<a class="btn" href="agendar.html">Agendar Horário</a>
-<a class="btn admin" href="admin.html">Área Admin</a>
+<button class="btn-grande" onclick="location.href='agendar.html'">
+    Agendar Horário
+</button>
 ```
 
 </div>
+
+<button class="config" onclick="login()">⚙</button>
+
+<script>
+function login(){
+    const senha = prompt("Senha ADM");
+    if(senha === "1020"){
+        location.href = "admin.html";
+    } else {
+        alert("Senha incorreta");
+    }
+}
+</script>
 
 </body>
 </html>
