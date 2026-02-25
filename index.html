@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 
 <html lang="pt-BR">
 <head>
@@ -106,7 +106,7 @@ border-radius:10px;
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
 <script>
-// COLE SEU FIREBASE AQUI
+// COLE SEU FIREBASE
 const firebaseConfig = {
 apiKey: "SUA_API_KEY",
 authDomain: "SEU_PROJETO.firebaseapp.com",
@@ -122,7 +122,7 @@ const db = firebase.database();
 
 let horarioSelecionado = null;
 
-// GERAR HORÁRIOS (corrigido)
+// GERAR HORÁRIOS (CORRIGIDO)
 function gerarHorarios(){
 const div = document.getElementById("horarios");
 div.innerHTML = "";
@@ -130,9 +130,10 @@ div.innerHTML = "";
 const dataSelecionada = document.getElementById("data").value;
 if(!dataSelecionada) return;
 
-const hoje = new Date();
-const hojeStr = hoje.toISOString().split("T")[0];
+const agora = new Date();
+const hojeStr = agora.toISOString().split("T")[0];
 
+// bloquear datas passadas
 if(dataSelecionada < hojeStr){
 div.innerHTML = "<p>Data indisponível</p>";
 return;
@@ -140,24 +141,29 @@ return;
 
 firebase.database().ref("agendamentos/"+dataSelecionada).once("value", snap=>{
 
-const ocupados = snap.val() || {};
+const dados = snap.val() || {};
 
 for(let h=9; h<19; h++){
 for(let m=0; m<60; m+=10){
 
 let hora = (h<10?"0"+h:h)+":"+(m==0?"00":m);
 
-if(ocupados[hora]) continue;
+// se ocupado ou bloqueado
+if(dados[hora]){
+if(dados[hora].bloqueado) continue;
+if(dados[hora].nome) continue;
+}
 
+// não mostrar horários passados hoje
 if(dataSelecionada === hojeStr){
-let agoraHora = hoje.getHours();
-let agoraMin = hoje.getMinutes();
+let hAtual = agora.getHours();
+let mAtual = agora.getMinutes();
 
-let horaNum = parseInt(hora.split(":")[0]);
-let minNum = parseInt(hora.split(":")[1]);
+let hNum = parseInt(hora.split(":")[0]);
+let mNum = parseInt(hora.split(":")[1]);
 
-if(horaNum < agoraHora) continue;
-if(horaNum === agoraHora && minNum <= agoraMin) continue;
+if(hNum < hAtual) continue;
+if(hNum === hAtual && mNum <= mAtual) continue;
 }
 
 let btn = document.createElement("button");
@@ -197,23 +203,20 @@ status.innerText="Preencha tudo";
 return;
 }
 
-const codigo = Math.random().toString(36).substring(2,8).toUpperCase();
-
 let inicio = new Date(data+"T"+horarioSelecionado);
 
+// bloqueio por duração
 for(let i=0;i<duracao;i+=10){
 let slot = new Date(inicio.getTime() + i*60000);
 let hora = slot.toTimeString().slice(0,5);
 
 firebase.database().ref("agendamentos/"+data+"/"+hora).set({
 nome,
-telefone,
-codigo
+telefone
 });
 }
 
-const msg = `Olá ${nome}, seu horário foi confirmado!
-
+const msg = `Agendamento confirmado!
 Data: ${data}
 Hora: ${horarioSelecionado}
 
@@ -227,41 +230,40 @@ horarioSelecionado=null;
 gerarHorarios();
 }
 
-// CANCELAMENTO + AVISO
+// CANCELAMENTO + AVISO PARA VOCÊ
 window.onload = function(){
 
 const url = new URL(window.location.href);
 const cancelar = url.searchParams.get("cancelar");
 const admin = url.searchParams.get("admin");
 
-// ativar admin
 if(admin === "1020"){
 document.getElementById("adminArea").style.display="block";
 }
 
-// cancelamento
 if(cancelar){
 const partes = cancelar.split("_");
 const data = partes[0];
 const hora = partes[1];
 
-if(confirm("Deseja realmente cancelar o agendamento das " + hora + " ?")){
+if(confirm("Deseja cancelar o horário "+hora+"?")){
 
 for(let i=0;i<60;i+=10){
-let slot = new Date(data + "T" + hora);
-slot = new Date(slot.getTime() + i*60000);
+let slot = new Date(data+"T"+hora);
+slot = new Date(slot.getTime()+i*60000);
 let h = slot.toTimeString().slice(0,5);
 firebase.database().ref("agendamentos/"+data+"/"+h).remove();
 }
 
-alert("Agendamento cancelado!");
+alert("Cancelado com sucesso");
 
-// aviso para você
-const mensagem = `Cancelamento confirmado!
+window.open(
+"https://wa.me/5516997369740?text="+encodeURIComponent(
+`Cancelamento confirmado
 Data: ${data}
-Hora: ${hora}`;
-
-window.open("https://wa.me/5516997369740?text="+encodeURIComponent(mensagem));
+Hora: ${hora}`
+)
+);
 
 window.location.href = window.location.pathname;
 }
@@ -304,7 +306,7 @@ let hora = (h<10?"0"+h:h)+":"+(m==0?"00":m);
 firebase.database().ref("agendamentos/"+data+"/"+hora).set({bloqueado:true});
 }
 }
-alert("Dia bloqueado!");
+alert("Dia bloqueado");
 }
 </script>
 
