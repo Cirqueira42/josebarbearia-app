@@ -3,115 +3,24 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>ADM</title>
-
-<style>
-body{background:#000;color:#fff;font-family:Arial;margin:0;}
-.container{max-width:420px;margin:auto;padding:20px;}
-
-button{
-width:100%;
-padding:14px;
-margin-top:10px;
-border:none;
-border-radius:10px;
-font-size:16px;
-}
-
-.voltar{background:#444;}
-.ver{background:#00c853;}
-.bloquear{background:#ff5252;}
-.desbloquear{background:#2196f3;}
-
-.card{
-background:#222;
-padding:10px;
-margin-top:8px;
-border-radius:8px;
-}
-</style>
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin</title>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <div class="container">
-
-<button class="voltar" onclick="window.location='index.html'">⬅ Voltar</button>
-
-<h2>Painel ADM</h2>
-
-<input type="date" id="data">
-
-<button class="ver" onclick="ver()">Ver Clientes</button> <button class="bloquear" onclick="bloquearDia()">Bloquear Dia</button> <button class="desbloquear" onclick="desbloquearDia()">Desbloquear Dia</button>
-
-<input id="hora" placeholder="Hora ex: 10:00">
-<button class="bloquear" onclick="bloquearHora()">Bloquear Hora</button>
-<button class="desbloquear" onclick="desbloquearHora()">Desbloquear Hora</button>
-
-<div id="lista"></div>
-
+    <h2>Agendamentos</h2>
+    <div id="lista"></div>
 </div>
 
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
-<script>
-const firebaseConfig = {
-// COLE SEU FIREBASE
-};
+<script src="firebase-config.js"></script>
 
-firebase.initializeApp(firebaseConfig);
-const db=firebase.database();
-
-function ver(){
-const d=data.value;
-lista.innerHTML="Carregando...";
-
-db.ref("agendamentos/"+d).once("value",snap=>{
-const dados=snap.val();
-lista.innerHTML="";
-
-if(!dados){lista.innerHTML="Sem clientes";return;}
-
-Object.keys(dados).forEach(h=>{
-let c=dados[h];
-lista.innerHTML+=`<div class="card">${h} - ${c.nome} - ${c.telefone||''}</div>`;
-});
-});
-}
-
-function bloquearDia(){
-const d=data.value;
-for(let h=9;h<19;h++){
-for(let m=0;m<60;m+=10){
-let hora=String(h).padStart(2,'0')+":"+String(m).padStart(2,'0');
-db.ref("agendamentos/"+d+"/"+hora).set({nome:"BLOQUEADO"});
-}
-}
-alert("Dia bloqueado");
-}
-
-function desbloquearDia(){
-const d=data.value;
-db.ref("agendamentos/"+d).remove();
-alert("Dia liberado");
-}
-
-function bloquearHora(){
-const d=data.value;
-const h=hora.value;
-db.ref("agendamentos/"+d+"/"+h).set({nome:"BLOQUEADO"});
-alert("Hora bloqueada");
-}
-
-function desbloquearHora(){
-const d=data.value;
-const h=hora.value;
-db.ref("agendamentos/"+d+"/"+h).remove();
-alert("Hora liberada");
-}
-</script>
+<script src="app.js"></script>
 
 </body>
 </html>
