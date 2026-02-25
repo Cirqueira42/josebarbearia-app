@@ -5,147 +5,31 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Agendamento</title>
-
-<style>
-body{background:#000;color:#fff;font-family:Arial;margin:0;}
-.container{max-width:420px;margin:auto;padding:20px;}
-h1{text-align:center;color:#00c853;}
-
-.voltar{
-background:#444;
-margin-bottom:15px;
-}
-
-input,select{
-width:100%;
-padding:16px;
-margin-top:12px;
-border-radius:10px;
-border:none;
-font-size:18px;
-}
-
-.horarios{
-display:grid;
-grid-template-columns:repeat(2,1fr);
-gap:12px;
-margin-top:20px;
-}
-
-.horarios button{
-padding:18px;
-font-size:18px;
-border:none;
-border-radius:10px;
-background:#222;
-color:#fff;
-}
-
-.confirmar{
-width:100%;
-padding:18px;
-font-size:20px;
-margin-top:20px;
-background:#00c853;
-border:none;
-border-radius:12px;
-}
-</style>
-
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <div class="container">
+    <h2>Agendar Horário</h2>
 
-<button class="voltar" onclick="window.location='index.html'">⬅ Voltar</button>
-
-<h1>Agendar</h1>
-
-<input id="nome" placeholder="Nome">
-<input id="telefone" placeholder="WhatsApp">
-
-<select id="servico">
-<option value="45">Corte - 45min</option>
-<option value="30">Barba - 30min</option>
-<option value="60">Corte + Barba</option>
-<option value="40">Infantil</option>
-</select>
-
+```
+<input type="text" id="nome" placeholder="Seu nome">
 <input type="date" id="data">
 
-<div class="horarios" id="horarios"></div>
+<div id="horarios"></div>
 
-<button class="confirmar" onclick="agendar()">Confirmar</button>
+<button onclick="salvarAgendamento()">Confirmar</button>
+```
 
 </div>
 
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
-<script>
-const firebaseConfig = {
-// COLE SEU FIREBASE
-};
+<script src="firebase-config.js"></script>
 
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-
-let horarioSelecionado=null;
-
-const hoje=new Date().toISOString().split("T")[0];
-data.value=hoje;
-data.min=hoje;
-
-window.onload=()=>gerarHorarios(hoje);
-data.onchange=()=>gerarHorarios(data.value);
-
-function gerarHorarios(d){
-horarios.innerHTML="";
-horarioSelecionado=null;
-
-db.ref("agendamentos/"+d).once("value",snap=>{
-const ocupados=snap.val()||{};
-
-for(let h=9;h<19;h++){
-for(let m=0;m<60;m+=10){
-
-let hora=String(h).padStart(2,'0')+":"+String(m).padStart(2,'0');
-if(ocupados[hora]) continue;
-
-let btn=document.createElement("button");
-btn.innerText=hora;
-
-btn.onclick=()=>{
-document.querySelectorAll(".horarios button").forEach(b=>b.style.background="#222");
-btn.style.background="#00c853";
-horarioSelecionado=hora;
-};
-
-horarios.appendChild(btn);
-}
-}
-});
-}
-
-function agendar(){
-const nome=document.getElementById("nome").value;
-const tel=document.getElementById("telefone").value;
-const d=data.value;
-const dur=parseInt(servico.value);
-
-let inicio=new Date(d+"T"+horarioSelecionado);
-
-for(let i=0;i<dur;i+=10){
-let slot=new Date(inicio.getTime()+i*60000);
-let h=slot.toTimeString().slice(0,5);
-db.ref("agendamentos/"+d+"/"+h).set({nome,telefone:tel});
-}
-
-window.open("https://wa.me/55"+tel);
-gerarHorarios(d);
-}
-</script>
+<script src="app.js"></script>
 
 </body>
 </html>
