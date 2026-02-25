@@ -13,18 +13,15 @@ color:#fff;
 font-family:Arial;
 margin:0;
 }
-
 .container{
 max-width:420px;
 margin:auto;
 padding:20px;
 }
-
 h1{
 color:#00c853;
 text-align:center;
 }
-
 input,select{
 width:100%;
 padding:14px;
@@ -33,14 +30,12 @@ border-radius:10px;
 border:none;
 font-size:16px;
 }
-
 .horarios{
 display:grid;
 grid-template-columns:repeat(3,1fr);
 gap:10px;
 margin-top:20px;
 }
-
 .horarios button{
 padding:14px;
 border:none;
@@ -49,7 +44,6 @@ background:#1f1f1f;
 color:#fff;
 font-size:16px;
 }
-
 .confirmar{
 width:100%;
 margin-top:20px;
@@ -60,7 +54,6 @@ border-radius:12px;
 font-size:18px;
 color:#fff;
 }
-
 #status{
 margin-top:10px;
 text-align:center;
@@ -68,8 +61,8 @@ text-align:center;
 </style>
 
 </head>
-<body>
 
+<body>
 <div class="container">
 <h1>José Barbearia</h1>
 
@@ -100,7 +93,7 @@ text-align:center;
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
 <script>
-// COLE SEU FIREBASE AQUI
+// ===== COLE SEU FIREBASE =====
 const firebaseConfig = {
 apiKey: "SUA_API_KEY",
 authDomain: "SEU_PROJETO.firebaseapp.com",
@@ -116,20 +109,38 @@ const db = firebase.database();
 
 let horarioSelecionado = null;
 
-// GERAR HORÁRIOS
+// ===== BLOQUEAR DATAS PASSADAS =====
+const hoje = new Date().toISOString().split("T")[0];
+document.getElementById("data").min = hoje;
+
+// ===== GERAR HORÁRIOS COM VERIFICAÇÃO =====
 function gerarHorarios(){
+const data = document.getElementById("data").value;
+if(!data) return;
+
 const div = document.getElementById("horarios");
 div.innerHTML="";
+
+db.ref("agendamentos/"+data).once("value", snap=>{
+const ocupados = snap.val() || {};
+
+const agora = new Date();
 
 for(let h=9; h<19; h++){
 for(let m=0; m<60; m+=10){
 
 let hora = (h<10?"0"+h:h)+":"+(m==0?"00":m);
+let dataHora = new Date(data+"T"+hora);
+
+// NÃO MOSTRA HORÁRIO PASSADO (HOJE)
+if(data === hoje && dataHora <= agora) continue;
+
+// NÃO MOSTRA HORÁRIO OCUPADO
+if(ocupados[hora]) continue;
 
 let btn = document.createElement("button");
 btn.innerText = hora;
 
-// BOTÃO SELECIONAR (VERDE)
 btn.onclick = () => {
 document.querySelectorAll(".horarios button").forEach(b=>{
 b.style.background="#1f1f1f";
@@ -141,11 +152,13 @@ horarioSelecionado = hora;
 div.appendChild(btn);
 }
 }
+});
 }
 
-gerarHorarios();
+// Atualiza ao escolher data
+document.getElementById("data").addEventListener("change", gerarHorarios);
 
-// AGENDAR
+// ===== AGENDAR =====
 function agendar(){
 
 const nome = document.getElementById("nome").value;
@@ -160,21 +173,20 @@ return;
 }
 
 const codigo = Math.random().toString(36).substring(2,8).toUpperCase();
-
 let inicio = new Date(data+"T"+horarioSelecionado);
 
-// BLOQUEAR CONFORME DURAÇÃO
+// BLOQUEIA CONFORME DURAÇÃO
 for(let i=0;i<duracao;i+=10){
 let slot = new Date(inicio.getTime() + i*60000);
 let hora = slot.toTimeString().slice(0,5);
-firebase.database().ref("agendamentos/"+data+"/"+hora).set({
+db.ref("agendamentos/"+data+"/"+hora).set({
 nome,
 telefone,
 codigo
 });
 }
 
-// WHATSAPP
+// WHATSAPP CLIENTE
 const msg = `Olá ${nome}, seu horário foi confirmado!
 
 Data: ${data}
@@ -190,7 +202,7 @@ horarioSelecionado=null;
 gerarHorarios();
 }
 
-// CANCELAMENTO COM CONFIRMAÇÃO
+// ===== CANCELAMENTO + AVISO PARA VOCÊ =====
 window.onload = function(){
 const url = new URL(window.location.href);
 const cancelar = url.searchParams.get("cancelar");
@@ -201,15 +213,27 @@ const data = partes[0];
 const hora = partes[1];
 
 if(confirm("Deseja realmente cancelar o agendamento das " + hora + " ?")){
-for(let i=0;i<60;i+=10){
-let slot = new Date(data + "T" + hora);
-slot = new Date(slot.getTime() + i*60000);
-let h = slot.toTimeString().slice(0,5);
-firebase.database().ref("agendamentos/"+data+"/"+h).remove();
-}
+    
+    for(let i=0;i<60;i+=10){
+        let slot = new Date(data + "T" + hora);
+        slot = new Date(slot.getTime() + i*60000);
+        let h = slot.toTimeString().slice(0,5);
+        db.ref("agendamentos/"+data+"/"+h).remove();
+    }
 
-alert("Agendamento cancelado com sucesso!");
-window.location.href = window.location.pathname;
+    alert("Agendamento cancelado com sucesso!");
+
+    const mensagem = `Cancelamento confirmado!
+
+Data: ${data}
+Hora: ${hora}`;
+
+    window.open(
+        "https://wa.me/5516997369740?text=" + encodeURIComponent(mensagem),
+        "_blank"
+    );
+
+    window.location.href = window.location.pathname;
 }
 }
 }
