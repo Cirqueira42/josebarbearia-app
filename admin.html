@@ -4,14 +4,23 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Admin</title>
+<title>Painel ADM</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <div class="container">
-    <h2>Agendamentos</h2>
-    <div id="lista"></div>
+
+<button class="voltar" onclick="location.href='index.html'">← Voltar</button>
+
+<h2>Painel Administrativo</h2>
+
+<input type="date" id="dataAdmin">
+
+<button class="btn" onclick="bloquearDia()">Bloquear Dia</button> <button class="btn" onclick="liberarDia()">Liberar Dia</button>
+
+<div id="clientes"></div>
+
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
