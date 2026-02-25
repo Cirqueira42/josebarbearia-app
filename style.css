@@ -1,35 +1,90 @@
-body {
-  font-family: Arial, sans-serif;
-  background: #111;
-  color: white;
-  text-align: center;
-  margin: 0;
-  padding: 20px;
+body{
+margin:0;
+background:#000;
+color:#fff;
+font-family:Arial;
 }
 
-h1 {
-  color: #00c853;
+.container{
+max-width:400px;
+margin:auto;
+padding:20px;
+text-align:center;
 }
 
-button {
-  padding: 12px;
-  margin: 8px;
-  font-size: 16px;
-  border: none;
-  border-radius: 6px;
-  background: #00c853;
-  color: white;
-  cursor: pointer;
+.logo{
+color:#00c853;
+font-size:32px;
+margin-bottom:30px;
 }
 
-button:hover {
-  background: #00e676;
+input, select{
+width:100%;
+padding:15px;
+margin:10px 0;
+border-radius:10px;
+border:none;
+font-size:16px;
 }
 
-input, select {
-  padding: 10px;
-  margin: 8px;
-  font-size: 16px;
-  border-radius: 6px;
-  border: none;
+.btn-grande{
+width:100%;
+padding:18px;
+font-size:20px;
+background:#00c853;
+color:#fff;
+border:none;
+border-radius:12px;
+margin-top:20px;
+}
+
+.btn{
+width:100%;
+padding:12px;
+margin:5px 0;
+background:#333;
+color:#fff;
+border:none;
+border-radius:8px;
+}
+
+.voltar{
+margin-bottom:10px;
+background:#222;
+color:#fff;
+border:none;
+padding:10px;
+border-radius:8px;
+}
+
+.config{
+position:fixed;
+top:15px;
+right:15px;
+width:55px;
+height:55px;
+border-radius:50%;
+background:#222;
+color:#fff;
+font-size:22px;
+border:none;
+}
+
+.horarios{
+display:flex;
+flex-wrap:wrap;
+gap:10px;
+margin-top:15px;
+}
+
+.horario{
+flex:1 0 30%;
+padding:12px;
+background:#222;
+border-radius:8px;
+}
+
+.horario.ocupado{
+background:#555;
+pointer-events:none;
 }
